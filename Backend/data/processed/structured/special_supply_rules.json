@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "basis": {
+    "structured_at": "2026-06-15",
+    "excluded_supply_types": ["기관추천 특별공급"],
+    "accuracy_notice": "입력 정보가 부족해 정확한 자격/가점 안내가 어렵습니다.",
+    "source_refs": [
+      "housing_supply_rule_20251031_hwp",
+      "lh_special_supply_guide_20260608",
+      "subscription_system_guide_md_2025",
+      "myhome_faq_raw_special_supply"
+    ]
+  },
+  "supply_types": {
+    "newlywed": {
+      "display_name": "신혼부부 특별공급",
+      "calculation_type": "POINT_BASED_OR_PRIORITY_BASED",
+      "source_refs": [
+        "subscription_system_guide_md_2025:신혼부부 특별공급",
+        "lh_special_supply_guide_20260608:pages_5_8"
+      ],
+      "eligibility_items": [
+        {"field": "is_homeless", "label": "무주택세대구성원"},
+        {"field": "marriage_period", "label": "혼인기간 7년 이내 또는 인정 대상"},
+        {"field": "bankbook_joined_months", "label": "청약통장 6개월 이상"},
+        {"field": "bankbook_payments", "label": "납입 6회 이상"},
+        {"field": "average_monthly_income", "label": "소득 기준"},
+        {"field": "total_assets", "label": "자산 기준"}
+      ],
+      "public_score_table": {
+        "max_score": 16,
+        "items": {
+          "income": {
+            "max_score": 1,
+            "rows": [
+              {"label": "소득 80% 이하 또는 맞벌이 100% 이하", "score": 1},
+              {"label": "해당없음", "score": 0}
+            ]
+          },
+          "minor_child_count": {
+            "max_score": 3,
+            "rows": [
+              {"min_count": 3, "score": 3},
+              {"count": 2, "score": 2},
+              {"count": 1, "score": 1},
+              {"count": 0, "score": 0}
+            ]
+          },
+          "residence_period_years": {
+            "max_score": 3,
+            "rows": [
+              {"min_years": 3, "score": 3},
+              {"min_years": 1, "max_years": 3, "score": 2},
+              {"min_years": 0, "max_years": 1, "score": 1}
+            ]
+          },
+          "bankbook_payments": {
+            "max_score": 3,
+            "rows": [
+              {"min_count": 24, "score": 3},
+              {"min_count": 12, "max_count": 24, "score": 2},
+              {"min_count": 6, "max_count": 12, "score": 1}
+            ]
+          },
+          "marriage_period": {
+            "max_score": 3,
+            "rows": [
+              {"max_years": 3, "score": 3},
+              {"min_years": 3, "max_years": 5, "score": 2},
+              {"min_years": 5, "max_years": 7, "score": 1}
+            ]
+          },
+          "youngest_child_age_group": {
+            "max_score": 3,
+            "rows": [
+              {"value": "UNDER_2", "score": 3},
+              {"value": "AGE_2_TO_6", "score": 2},
+              {"value": "AGE_7_PLUS_MINOR", "score": 0}
+            ],
+            "notes": "한부모가족은 가장 어린 자녀 나이 기준을 사용한다."
+          }
+        }
+      },
+      "selection_notes": [
+        "민영/국민주택은 소득구분 및 신생아 우선공급 단계가 공고별로 적용된다.",
+        "공공 일반형/선택형 우선공급 동일 순위 경쟁은 지역 우선 후 배점항목 다득점순이다.",
+        "일반공급 및 추첨공급 내 경쟁은 지역 우선 후 추첨이다."
+      ]
+    },
+    "multi_child": {
+      "display_name": "다자녀 특별공급",
+      "calculation_type": "POINT_BASED",
+      "source_refs": [
+        "subscription_system_guide_md_2025:다자녀가구 특별공급",
+        "lh_special_supply_guide_20260608:pages_1_3",
+        "myhome_faq_raw_special_supply:nttId_728"
+      ],
+      "eligibility_items": [
+        {"field": "is_homeless", "label": "무주택세대구성원"},
+        {"field": "minor_child_count", "label": "미성년 자녀 2명 이상"},
+        {"field": "bankbook_joined_months", "label": "청약통장 6개월 이상"},
+        {"field": "average_monthly_income", "label": "공공주택 소득 기준"},
+        {"field": "total_assets", "label": "공공주택 자산 기준"}
+      ],
+      "score_table": {
+        "max_score": 100,
+        "items": {
+          "minor_child_count": {
+            "max_score": 40,
+            "rows": [
+              {"min_count": 4, "score": 40},
+              {"count": 3, "score": 35},
+              {"count": 2, "score": 25}
+            ]
+          },
+          "young_child_count": {
+            "max_score": 15,
+            "rows": [
+              {"min_count": 3, "score": 15},
+              {"count": 2, "score": 10},
+              {"count": 1, "score": 5},
+              {"count": 0, "score": 0}
+            ]
+          },
+          "household_composition": {
+            "max_score": 5,
+            "rows": [
+              {"field": "is_three_generation_household", "value": true, "score": 5},
+              {"field": "is_single_parent_family_5_years", "value": true, "score": 5},
+              {"label": "해당없음", "score": 0}
+            ]
+          },
+          "homeless_period_years": {
+            "max_score": 20,
+            "rows": [
+              {"min_years": 10, "score": 20},
+              {"min_years": 5, "max_years": 10, "score": 15},
+              {"min_years": 1, "max_years": 5, "score": 10},
+              {"min_years": 0, "max_years": 1, "score": 0}
+            ]
+          },
+          "residence_period_years": {
+            "max_score": 15,
+            "rows": [
+              {"min_years": 10, "score": 15},
+              {"min_years": 5, "max_years": 10, "score": 10},
+              {"min_years": 1, "max_years": 5, "score": 5},
+              {"min_years": 0, "max_years": 1, "score": 0}
+            ]
+          },
+          "bankbook_joined_months": {
+            "max_score": 5,
+            "rows": [
+              {"min_months": 120, "score": 5},
+              {"min_months": 0, "max_months": 120, "score": 0}
+            ]
+          }
+        }
+      },
+      "tie_breakers": [
+        "공공주택 우선공급 동일 순위 경쟁: 거주 지역, 배점항목 다득점순, 동점 시 추첨",
+        "마이홈 FAQ: 배점 동점 시 미성년 자녀 수가 많은 자, 이후 신청자 연령이 많은 자"
+      ]
+    },
+    "first_home": {
+      "display_name": "생애최초 특별공급",
+      "calculation_type": "CONDITION_OR_LOTTERY_BASED",
+      "source_refs": [
+        "subscription_system_guide_md_2025:생애최초 주택구입 특별공급",
+        "lh_special_supply_guide_20260608:pages_8_10"
+      ],
+      "eligibility_items": [
+        {"field": "is_homeless", "label": "무주택세대구성원"},
+        {"field": "has_property_history", "expected": false, "label": "세대구성원 모두 과거 주택 소유 이력 없음"},
+        {"field": "bankbook_payments", "label": "국민/공공주택 납입 24회 이상"},
+        {"field": "bankbook_balance", "label": "저축액 600만원 이상"},
+        {"field": "has_income_tax_payment_5_years", "label": "5년 이상 소득세 납부"},
+        {"field": "average_monthly_income", "label": "소득 기준"},
+        {"field": "total_assets", "label": "소득 초과 시 자산 기준"}
+      ],
+      "selection_notes": [
+        "민영주택은 신생아 우선/일반, 우선공급, 일반공급, 추첨공급 단계가 있다.",
+        "국민/공공주택은 소득구간별 우선/일반/추첨공급으로 처리한다.",
+        "동일 단계 경쟁은 지역 우선 후 추첨 방식이다."
+      ]
+    },
+    "newborn": {
+      "display_name": "신생아 특별공급",
+      "calculation_type": "POINT_BASED_OR_PRIORITY_BASED",
+      "source_refs": [
+        "subscription_system_guide_md_2025:신생아 특별공급",
+        "lh_special_supply_guide_20260608:pages_10_12"
+      ],
+      "eligibility_items": [
+        {"field": "is_homeless", "label": "무주택세대구성원"},
+        {"field": "youngest_child_age_group", "expected": "UNDER_2", "label": "2세 미만 자녀"},
+        {"field": "bankbook_joined_months", "label": "청약통장 6개월 이상"},
+        {"field": "bankbook_payments", "label": "납입 6회 이상"},
+        {"field": "average_monthly_income", "label": "소득 기준"},
+        {"field": "total_assets", "label": "자산 기준"}
+      ],
+      "public_score_table": {
+        "max_score": 10,
+        "items": {
+          "income": {
+            "max_score": 1,
+            "rows": [
+              {"label": "소득 80% 이하 또는 맞벌이 100% 이하", "score": 1},
+              {"label": "해당없음", "score": 0}
+            ]
+          },
+          "minor_child_count": {
+            "max_score": 3,
+            "rows": [
+              {"min_count": 3, "score": 3},
+              {"count": 2, "score": 2},
+              {"count": 1, "score": 1}
+            ]
+          },
+          "residence_period_years": {
+            "max_score": 3,
+            "rows": [
+              {"min_years": 3, "score": 3},
+              {"min_years": 1, "max_years": 3, "score": 2},
+              {"min_years": 0, "max_years": 1, "score": 1}
+            ]
+          },
+          "bankbook_payments": {
+            "max_score": 3,
+            "rows": [
+              {"min_count": 24, "score": 3},
+              {"min_count": 12, "max_count": 24, "score": 2},
+              {"min_count": 6, "max_count": 12, "score": 1}
+            ]
+          }
+        }
+      },
+      "selection_notes": [
+        "우선공급 70%, 일반공급 20%, 추첨공급 10% 구조다.",
+        "우선/일반공급 경쟁은 지역 우선 후 배점항목 다득점순이다.",
+        "추첨공급 경쟁은 지역 우선 후 추첨이다."
+      ]
+    },
+    "elderly_parent": {
+      "display_name": "노부모부양 특별공급",
+      "calculation_type": "GENERAL_SCORE_OR_PRIORITY_BASED",
+      "source_refs": [
+        "subscription_system_guide_md_2025:노부모부양 특별공급",
+        "housing_supply_rule_appendix_1_20251031"
+      ],
+      "eligibility_items": [
+        {"field": "is_homeless", "label": "무주택세대구성원"},
+        {"field": "is_household_head", "label": "세대주"},
+        {"field": "elderly_support", "expected": "MEETS_65_AND_3Y", "label": "만 65세 이상 직계존속 3년 이상 부양"},
+        {"field": "bankbook_joined_months", "label": "청약통장 가입기간"},
+        {"field": "average_monthly_income", "label": "공공주택 소득 기준"}
+      ],
+      "selection_notes": [
+        "민영주택은 지역우선 후 일반공급 가점제를 적용한다.",
+        "국민주택은 지역우선 후 순차제를 적용한다.",
+        "공공주택은 우선공급/추첨공급 소득구분과 순차제를 적용한다."
+      ]
+    }
+  }
+}

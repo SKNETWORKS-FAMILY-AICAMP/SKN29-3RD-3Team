@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "basis": {
+    "primary_source_id": "housing_supply_rule_appendix_1_20251031",
+    "source_file": null,
+    "external_source_file": "housing_supply_rule_appendix_1_20251031.pdf",
+    "source_section": "[별표 1] 가점제 적용기준(제2조제8호 관련)",
+    "source_revision": "개정 2024.12.18.",
+    "structured_at": "2026-06-13",
+    "needs_legal_review": false
+  },
+  "score_limits": {
+    "homeless_period": 32,
+    "dependent_family": 35,
+    "subscription_period": 17,
+    "spouse_subscription_bonus": 3,
+    "total": 84
+  },
+  "tables": {
+    "homeless_period": [
+      {"label": "1년 미만", "min_years": 0, "max_years": 1, "score": 2},
+      {"label": "1년 이상 ~ 2년 미만", "min_years": 1, "max_years": 2, "score": 4},
+      {"label": "2년 이상 ~ 3년 미만", "min_years": 2, "max_years": 3, "score": 6},
+      {"label": "3년 이상 ~ 4년 미만", "min_years": 3, "max_years": 4, "score": 8},
+      {"label": "4년 이상 ~ 5년 미만", "min_years": 4, "max_years": 5, "score": 10},
+      {"label": "5년 이상 ~ 6년 미만", "min_years": 5, "max_years": 6, "score": 12},
+      {"label": "6년 이상 ~ 7년 미만", "min_years": 6, "max_years": 7, "score": 14},
+      {"label": "7년 이상 ~ 8년 미만", "min_years": 7, "max_years": 8, "score": 16},
+      {"label": "8년 이상 ~ 9년 미만", "min_years": 8, "max_years": 9, "score": 18},
+      {"label": "9년 이상 ~ 10년 미만", "min_years": 9, "max_years": 10, "score": 20},
+      {"label": "10년 이상 ~ 11년 미만", "min_years": 10, "max_years": 11, "score": 22},
+      {"label": "11년 이상 ~ 12년 미만", "min_years": 11, "max_years": 12, "score": 24},
+      {"label": "12년 이상 ~ 13년 미만", "min_years": 12, "max_years": 13, "score": 26},
+      {"label": "13년 이상 ~ 14년 미만", "min_years": 13, "max_years": 14, "score": 28},
+      {"label": "14년 이상 ~ 15년 미만", "min_years": 14, "max_years": 15, "score": 30},
+      {"label": "15년 이상", "min_years": 15, "max_years": null, "score": 32}
+    ],
+    "dependent_family": [
+      {"label": "0명", "count": 0, "score": 5},
+      {"label": "1명", "count": 1, "score": 10},
+      {"label": "2명", "count": 2, "score": 15},
+      {"label": "3명", "count": 3, "score": 20},
+      {"label": "4명", "count": 4, "score": 25},
+      {"label": "5명", "count": 5, "score": 30},
+      {"label": "6명 이상", "min_count": 6, "score": 35}
+    ],
+    "subscription_period": [
+      {"label": "6개월 미만", "min_months": 0, "max_months": 6, "score": 1},
+      {"label": "6개월 이상 ~ 1년 미만", "min_months": 6, "max_months": 12, "score": 2},
+      {"label": "1년 이상 ~ 2년 미만", "min_months": 12, "max_months": 24, "score": 3},
+      {"label": "2년 이상 ~ 3년 미만", "min_months": 24, "max_months": 36, "score": 4},
+      {"label": "3년 이상 ~ 4년 미만", "min_months": 36, "max_months": 48, "score": 5},
+      {"label": "4년 이상 ~ 5년 미만", "min_months": 48, "max_months": 60, "score": 6},
+      {"label": "5년 이상 ~ 6년 미만", "min_months": 60, "max_months": 72, "score": 7},
+      {"label": "6년 이상 ~ 7년 미만", "min_months": 72, "max_months": 84, "score": 8},
+      {"label": "7년 이상 ~ 8년 미만", "min_months": 84, "max_months": 96, "score": 9},
+      {"label": "8년 이상 ~ 9년 미만", "min_months": 96, "max_months": 108, "score": 10},
+      {"label": "9년 이상 ~ 10년 미만", "min_months": 108, "max_months": 120, "score": 11},
+      {"label": "10년 이상 ~ 11년 미만", "min_months": 120, "max_months": 132, "score": 12},
+      {"label": "11년 이상 ~ 12년 미만", "min_months": 132, "max_months": 144, "score": 13},
+      {"label": "12년 이상 ~ 13년 미만", "min_months": 144, "max_months": 156, "score": 14},
+      {"label": "13년 이상 ~ 14년 미만", "min_months": 156, "max_months": 168, "score": 15},
+      {"label": "14년 이상 ~ 15년 미만", "min_months": 168, "max_months": 180, "score": 16},
+      {"label": "15년 이상", "min_months": 180, "max_months": null, "score": 17}
+    ]
+  },
+  "rules": {
+    "date_basis_name": "announcement_date",
+    "homeless_period_basis": "주택공급신청자와 배우자를 기준으로 하며 30세가 되는 날부터 계속하여 무주택인 기간",
+    "marriage_before_30_uses_marriage_date": true,
+    "disposed_house_uses_latest_homeless_date": true,
+    "under_30_unmarried_homeless_score": 0,
+    "spouse_subscription_merge": {
+      "enabled": true,
+      "excluded_supply_type": "제46조 특별공급",
+      "spouse_period_multiplier": 0.5,
+      "max_bonus_score": 3,
+      "subscription_score_cap_after_merge": 17
+    }
+  }
+}

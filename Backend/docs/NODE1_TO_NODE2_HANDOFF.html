@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Node 1 Handoff Guide</title>
+  <style>
+    :root {
+      --text: #1f2933;
+      --muted: #5b6675;
+      --line: #dce3ec;
+      --panel: #f6f8fb;
+      --note: #eef5ff;
+      --note-border: #3b82f6;
+      --warn: #fff7ed;
+      --warn-border: #d97706;
+      --code-bg: #18202a;
+      --code-text: #edf2f7;
+    }
+    body {
+      margin: 0;
+      color: var(--text);
+      background: #eef2f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.65;
+    }
+    main {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 42px 30px 76px;
+      background: #fff;
+    }
+    h1, h2, h3 {
+      line-height: 1.25;
+      margin: 0;
+    }
+    h1 {
+      font-size: 34px;
+      margin-bottom: 10px;
+    }
+    h2 {
+      font-size: 23px;
+      margin-top: 40px;
+      padding-top: 26px;
+      border-top: 1px solid var(--line);
+    }
+    h3 {
+      font-size: 17px;
+      margin-top: 24px;
+    }
+    p {
+      margin: 10px 0;
+    }
+    ul, ol {
+      padding-left: 22px;
+    }
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: #edf1f6;
+      color: #24303f;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 0.94em;
+    }
+    pre {
+      overflow: auto;
+      padding: 16px;
+      border-radius: 8px;
+      background: var(--code-bg);
+      color: var(--code-text);
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    pre code {
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      color: inherit;
+      font-size: inherit;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      vertical-align: top;
+    }
+    th {
+      background: var(--panel);
+      text-align: left;
+    }
+    .lead {
+      color: var(--muted);
+      font-size: 16px;
+    }
+    .note, .warn {
+      padding: 12px 14px;
+      margin: 14px 0;
+      border-left: 4px solid;
+    }
+    .note {
+      background: var(--note);
+      border-color: var(--note-border);
+    }
+    .warn {
+      background: var(--warn);
+      border-color: var(--warn-border);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fff;
+    }
+    .box h3 {
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Node 1 공유 및 연계 가이드</h1>
+  <p class="lead">Node 1 자료를 처음 공유하는 기준으로, 프론트 API 응답과 LangGraph 내부 state를 분리해서 정리했습니다.</p>
+
+  <section>
+    <h2>0. 이번 수정 요약</h2>
+    <div class="note">
+      지훈님 피드백을 반영해 프론트 출력용 데이터와 LangGraph state용 데이터를 분리했습니다. 기존 프론트 API는 상세 응답을 유지하고, LangGraph에는 노드 연계에 필요한 최소 판정값만 넘깁니다.
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>구분</th>
+          <th>수정 전</th>
+          <th>수정 후</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>프론트 API</td>
+          <td>상세 카드, 이유, 근거, 추가 질문을 응답</td>
+          <td>그대로 유지. 화면 표시와 사용자 안내에 사용</td>
+        </tr>
+        <tr>
+          <td>LangGraph state</td>
+          <td>프론트 표시용 카드, profile, source_refs까지 함께 포함</td>
+          <td>공통 state에는 profile을 보관하고, Node 1 patch에는 후보 공급유형, 검토 필요 여부, 누락 key, 탈락 사유만 전달</td>
+        </tr>
+        <tr>
+          <td>추천 공급유형</td>
+          <td>Node 1 state에 <code>recommended_supply</code> 자리 포함</td>
+          <td>Node 2 책임으로 분리. Node 1은 후보군만 전달</td>
+        </tr>
+        <tr>
+          <td>profile</td>
+          <td>Node 1 adapter가 다시 복사해서 전달</td>
+          <td>graph 시작 시점에 공통 state로 추가. Node 1 patch에서는 다시 복사하지 않음</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>1. 전체 역할</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>노드</th>
+          <th>담당</th>
+          <th>현재 기준</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Node 1</td>
+          <td>준억</td>
+          <td>사용자 프로필 기반으로 신청 후보 공급유형을 rule 기반 판별. RAG는 근거 출처 보강에만 사용</td>
+        </tr>
+        <tr>
+          <td>Node 2</td>
+          <td>은진</td>
+          <td>Node 1 후보군을 받아 가점 계산, 비교, 브리핑, 추천 공급유형 결정</td>
+        </tr>
+        <tr>
+          <td>Node 3~4</td>
+          <td>동윤</td>
+          <td>공고 조건과 전략 흐름 처리</td>
+        </tr>
+        <tr>
+          <td>Node 5</td>
+          <td>지훈</td>
+          <td>앞선 노드 결과와 공고 정보를 받아 최종 전략/리포트 흐름 처리</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>2. 팀원별 확인 포인트</h2>
+    <div class="grid">
+      <div class="box">
+        <h3>은진님</h3>
+        <p>프론트 연동은 기존 <code>POST /api/v1/diagnose/profile</code> 응답을 보면 됩니다. Node 2 연계는 <code>build_node1_graph_state()</code>의 최소 state를 기준으로 보면 됩니다.</p>
+      </div>
+      <div class="box">
+        <h3>동윤님</h3>
+        <p>Node 1은 공고 정보나 전략 생성까지 판단하지 않습니다. 이후 graph 공통 state에 <code>profile</code>, <code>announcement</code>, Node 2 결과가 채워지는 흐름을 가정합니다.</p>
+      </div>
+      <div class="box">
+        <h3>지훈님</h3>
+        <p>Node 5에서 필요한 값은 Node 2 이후에 정리되는 것을 전제로 합니다. Node 1은 <code>recommended_supply</code>를 결정하지 않고 후보 신호만 남깁니다.</p>
+      </div>
+      <div class="box">
+        <h3>공통</h3>
+        <p>화면 표시용 응답과 graph 내부 state는 목적이 다릅니다. API 응답은 풍부하게, graph state는 작고 명확하게 유지합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. 현재 Node 1 범위</h2>
+    <p>현재 Node 1에서 다루는 공급유형은 다음입니다.</p>
+    <ul>
+      <li>일반공급</li>
+      <li>신혼부부 특별공급</li>
+      <li>다자녀 특별공급</li>
+      <li>생애최초 특별공급</li>
+      <li>신생아 특별공급</li>
+      <li>노부모부양 특별공급</li>
+      <li>기관추천 특별공급</li>
+    </ul>
+    <div class="warn">
+      <code>기관추천 특별공급</code>은 프론트 API 카드에는 남겨두되, 현재 Node 2 연계용 graph state에서는 우선 제외했습니다. 별도 추천/증빙 흐름이 필요해서 일반적인 가점 계산 흐름과 다르기 때문입니다.
+    </div>
+    <div class="note">
+      <code>노부모부양 특별공급</code>의 핵심 조건인 만 65세 이상 직계존속 3년 이상 부양 여부는 현재 기본 profile 입력에 포함되어 있지 않습니다. Node 1은 무주택 세대주 조건을 먼저 보고 후보 가능성이 있으면 <code>elderly_support</code>를 <code>node1_missing_profile_keys</code>에 담아 후속 확인 항목으로 넘깁니다.
+    </div>
+  </section>
+
+  <section>
+    <h2>4. 프론트 기본 입력 여부</h2>
+    <p>현재 기준에서는 모든 사용자에게 노부모부양 여부를 처음부터 묻지 않는 흐름을 권장합니다.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>항목</th>
+          <th>현재 처리</th>
+          <th>이유</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>elderly_support</code></td>
+          <td>기본 profile에는 없음. Node 1에서 후보 가능성이 있으면 후속 질문 key로 전달</td>
+          <td>노부모부양 특공 후보가 아닌 사용자에게는 불필요한 질문이 될 수 있어 입력 부담을 줄이기 위함</td>
+        </tr>
+        <tr>
+          <td><code>profile.is_household_head</code></td>
+          <td>기본 profile에 포함</td>
+          <td>노부모부양뿐 아니라 여러 공급유형 판단에 영향을 줄 수 있는 기본 조건</td>
+        </tr>
+        <tr>
+          <td><code>profile.num_household_members</code></td>
+          <td>기본 profile에 포함</td>
+          <td>세대 구성 판단에 필요하고, 세대주 입력과 함께 확인하는 값</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="warn">
+      팀에서 노부모부양 여부를 첫 화면 기본 질문으로 받기로 결정하면 <code>backend/src/schemas/diagnose.py</code>의 <code>UserProfile</code>과 프론트 payload를 함께 수정해야 합니다. 지금 구조에서는 후속 질문 방식으로도 Node 2 연계가 가능합니다.
+    </div>
+  </section>
+
+  <section>
+    <h2>5. 확인할 파일</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>파일</th>
+          <th>확인 포인트</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>backend/src/services/rule_engine.py</code></td>
+          <td>Node 1 자격 후보 판단의 중심 파일입니다. <code>build_node1_profile_diagnoses()</code>와 공급유형별 <code>diagnose_*_by_profile()</code> 함수를 확인하면 됩니다.</td>
+        </tr>
+        <tr>
+          <td><code>backend/src/services/node1_state_adapter.py</code></td>
+          <td>Node 1 API 결과를 LangGraph 내부 state patch로 줄여주는 파일입니다. Node 2와 이후 노드 연계 시 핵심 확인 대상입니다.</td>
+        </tr>
+        <tr>
+          <td><code>backend/src/services/source_adapter.py</code></td>
+          <td>RAG 검색 결과를 프론트 응답의 <code>source_refs</code>에 붙입니다. 자격 판단 자체는 rule engine이 담당합니다.</td>
+        </tr>
+        <tr>
+          <td><code>backend/src/schemas/diagnose.py</code></td>
+          <td><code>/api/v1/diagnose/profile</code> 요청/응답 스키마입니다.</td>
+        </tr>
+        <tr>
+          <td><code>backend/src/routers/diagnose.py</code></td>
+          <td>FastAPI endpoint 위치입니다.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>6. 프론트 API 응답</h2>
+    <p>프론트 연동 endpoint는 유지했습니다.</p>
+    <pre><code>POST /api/v1/diagnose/profile</code></pre>
+    <p>이 응답은 화면 표시와 사용자 안내를 위해 상세 정보를 포함합니다.</p>
+    <pre><code>{
+  "result_mode": "NEEDS_DETAIL",
+  "result_status": "추가 확인 필요",
+  "candidate_supply_types": [
+    {
+      "supply_type": "신혼부부 특별공급",
+      "status": "추가 확인 필요",
+      "reasons": [
+        "혼인 또는 결혼 예정 상태이며 무주택으로 입력되었습니다."
+      ],
+      "missing_checks": [
+        "혼인기간",
+        "가구 월평균 소득",
+        "총자산"
+      ],
+      "next_questions": [
+        "marriage_period",
+        "average_monthly_income",
+        "total_assets"
+      ],
+      "source_refs": [
+        "청약홈 특별공급",
+        "주택공급에 관한 규칙"
+      ]
+    }
+  ],
+  "next_questions": [
+    "marriage_period",
+    "average_monthly_income",
+    "total_assets"
+  ],
+  "warnings": [
+    "최종 자격은 청약홈 및 입주자모집공고문 기준으로 확인해야 합니다."
+  ]
+}</code></pre>
+  </section>
+
+  <section>
+    <h2>7. LangGraph State</h2>
+    <p>LangGraph 내부 연계에는 초기 state와 Node 1 patch를 분리해서 사용합니다.</p>
+    <pre><code>from src.services.node1_state_adapter import (
+    build_initial_graph_state,
+    build_node1_graph_state,
+)
+
+state = build_initial_graph_state(request)
+state.update(build_node1_graph_state(request))</code></pre>
+    <p>초기 state는 프론트 입력에서 온 공통 profile을 담습니다.</p>
+    <pre><code>{
+  "profile": {
+    "region": "서울",
+    "is_homeless": true,
+    "homeless_period_years": 3,
+    "is_household_head": true,
+    "num_household_members": 3,
+    "bankbook_type": "주택청약종합저축",
+    "bankbook_join_date": "2023-01-01",
+    "bankbook_joined_months": 36,
+    "bankbook_payments": 24,
+    "bankbook_balance": 10000000,
+    "average_monthly_income": 5000000,
+    "total_assets": 100000000,
+    "birth_year": 1990,
+    "marital_status": "MARRIED",
+    "child_status": "HAS_CHILD",
+    "minor_children_status": "TWO_OR_MORE",
+    "has_two_or_more_minor_children": true,
+    "has_property_history": false
+  }
+}</code></pre>
+    <p>Node 1 patch는 Node 1이 책임지는 최소 판정값만 담습니다.</p>
+    <div class="note">
+      <code>profile</code>은 graph의 공통 state에 존재합니다. Node 1 adapter는 profile을 다시 복사하지 않고, Node 1이 새로 판단한 결과만 patch 형태로 반환합니다.
+    </div>
+    <pre><code>{
+  "node1_available_supply_types": [
+    "GENERAL_SUPPLY",
+    "NEWLYWED_SPECIAL",
+    "MULTI_CHILD_SPECIAL",
+    "LIFETIME_FIRST_SPECIAL"
+  ],
+  "node1_supply_checks": [
+    {
+      "supply_type": "NEWLYWED_SPECIAL",
+      "is_candidate": true,
+      "status": "NEED_REVIEW",
+      "missing_keys": [
+        "marriage_period",
+        "average_monthly_income",
+        "total_assets"
+      ],
+      "review_reasons": [
+        "소득/자산 기준은 모집공고 기준으로 재확인이 필요합니다."
+      ],
+      "blocking_reasons": []
+    }
+  ],
+  "node1_missing_profile_keys": [
+    "marriage_period",
+    "average_monthly_income",
+    "total_assets"
+  ],
+  "node1_need_review": true
+}</code></pre>
+    <table>
+      <thead>
+        <tr>
+          <th>필드</th>
+          <th>의미</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>node1_available_supply_types</code></td>
+          <td>Node 2가 비교 대상으로 삼을 수 있는 후보 공급유형 enum 목록</td>
+        </tr>
+        <tr>
+          <td><code>node1_supply_checks</code></td>
+          <td>공급유형별 후보 여부, 검토 필요 여부, 누락 key, 검토 사유, 탈락 사유</td>
+        </tr>
+        <tr>
+          <td><code>node1_missing_profile_keys</code></td>
+          <td>Node 2 또는 프론트가 추가 입력을 요구할 때 참고할 key 목록</td>
+        </tr>
+        <tr>
+          <td><code>node1_need_review</code></td>
+          <td>Node 1 후보군 중 추가 확인이 필요한 항목이 있는지 여부</td>
+        </tr>
+      </tbody>
+    </table>
+    <table>
+      <thead>
+        <tr>
+          <th>함수</th>
+          <th>역할</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>build_initial_graph_state()</code></td>
+          <td>프론트 입력을 graph 공통 state로 정규화합니다. 여기에는 <code>profile</code>이 포함됩니다.</td>
+        </tr>
+        <tr>
+          <td><code>build_node1_graph_state()</code></td>
+          <td>Node 1 판별 결과만 state patch로 반환합니다. 여기에는 <code>profile</code>을 다시 넣지 않습니다.</td>
+        </tr>
+      </tbody>
+    </table>
+    <table>
+      <thead>
+        <tr>
+          <th>status</th>
+          <th>의미</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>CANDIDATE</code></td>
+          <td>현재 입력값 기준으로 후보로 볼 수 있고, Node 2에서 비교 대상으로 사용할 수 있음</td>
+        </tr>
+        <tr>
+          <td><code>NEED_REVIEW</code></td>
+          <td>후보 가능성은 있으나 공고 조건 또는 추가 입력 확인이 필요함</td>
+        </tr>
+        <tr>
+          <td><code>NOT_APPLICABLE</code></td>
+          <td>현재 입력값 기준으로 해당 공급유형 가능성이 낮아 Node 2 비교 후보에서 제외</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>8. Node 2에서 채울 값</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>값</th>
+          <th>담당</th>
+          <th>설명</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>recommended_supply</code></td>
+          <td>Node 2</td>
+          <td>Node 1 후보 중 가장 유리한 공급유형. Node 1에서는 결정하지 않습니다.</td>
+        </tr>
+        <tr>
+          <td><code>ranked_supply_cards</code></td>
+          <td>Node 2</td>
+          <td>후보 공급유형별 순위, 점수 요약, 브리핑 카드</td>
+        </tr>
+        <tr>
+          <td><code>score_results_by_supply_type</code></td>
+          <td>Node 2</td>
+          <td>가점 계산기 또는 MCP tool 결과</td>
+        </tr>
+        <tr>
+          <td><code>briefing_message</code></td>
+          <td>Node 2</td>
+          <td>사용자에게 보여줄 1차 브리핑 문장</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>9. 테스트 방법</h2>
+    <ol>
+      <li>백엔드 실행: <code>uvicorn src.main:app --reload</code></li>
+      <li>프론트 실행: <code>streamlit run frontend/streamlit_app.py</code></li>
+      <li>프론트에서 자가진단 입력 후 결과 카드 확인</li>
+      <li>프론트 응답에서는 <code>candidate_supply_types</code>, <code>next_questions</code>, <code>source_refs</code> 확인</li>
+      <li>Node 2 연계에서는 <code>build_node1_graph_state()</code> 결과의 <code>node1_available_supply_types</code>와 <code>node1_supply_checks</code> 확인</li>
+    </ol>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "housing_supply_rule_appendix_1_20251031",
+      "source_name": "주택공급에 관한 규칙 별표 1 가점제 적용기준",
+      "source_url": null,
+      "file_path": null,
+      "external_file_name": "housing_supply_rule_appendix_1_20251031.pdf",
+      "effective_date": "2025-10-31",
+      "fetched_at": "2026-06-13T22:40:22+09:00",
+      "sha256": "3E0E31A3B38A5259F4750119D351699AECC12918778B3B8ECB091DC9689916DE",
+      "source_priority": 1,
+      "notes": "Official-law PDF snapshot is intentionally stored outside Git. This repository keeps only the manifest and source-derived structured JSON for merge safety. SHA256 identifies the external shared PDF snapshot."
+    },
+    {
+      "id": "housing_supply_rule_20251031_hwp",
+      "source_name": "주택공급에 관한 규칙(국토교통부령 제01531호, 2025-10-31 시행) HWP 원문",
+      "source_url": null,
+      "file_path": "data/주택공급에 관한 규칙(국토교통부령)(제01531호)(20251031) (1).hwp",
+      "external_file_name": null,
+      "effective_date": "2025-10-31",
+      "fetched_at": "2026-06-13T22:40:22+09:00",
+      "sha256": "079832075FE15E029B842C1B46FADBC5007FE1E7FBE6D164EF6894CF91C17920",
+      "source_priority": 1,
+      "notes": "User-provided official law source. Re-check 국가법령정보센터 before production legal use."
+    },
+    {
+      "id": "lh_special_supply_guide_20260608",
+      "source_name": "LH청약플러스 분양가이드 신청자격-특별공급 PDF",
+      "source_url": "https://apply.lh.or.kr/lhapply/cm/cntnts/cntntsView.do?mi=1265&cntntsId=1051",
+      "file_path": "data/guide_special.pdf",
+      "external_file_name": null,
+      "effective_date": null,
+      "fetched_at": "2026-06-08T21:02:00+09:00",
+      "sha256": "5759548C71CCA735E2F28FF9A689899EBB9E8D02FA5E72A5193237FB532BDF32",
+      "source_priority": 2,
+      "notes": "Contains public-housing special-supply score tables for multi-child, newlywed, and newborn flows. Existing preprocessing code reads this raw file from data/guide_special.pdf."
+    },
+    {
+      "id": "subscription_system_guide_md_2025",
+      "source_name": "청약제도안내 Markdown 구조화 원문",
+      "source_url": null,
+      "file_path": "data/청약제도안내.md",
+      "external_file_name": null,
+      "effective_date": "2025",
+      "fetched_at": "2026-06-13T22:40:22+09:00",
+      "sha256": "775318E4DEB1FBB857DF163EE17CB34E26782482CEBC9E43D1B8A3E779AE1FA3",
+      "source_priority": 2,
+      "notes": "Used for special-supply eligibility, selection-stage, income, and asset rule summaries."
+    },
+    {
+      "id": "myhome_faq_raw_special_supply",
+      "source_name": "마이홈 특별공급 FAQ raw JSON",
+      "source_url": "https://www.myhome.go.kr",
+      "file_path": "data/myhome_faq_raw.json",
+      "external_file_name": null,
+      "effective_date": null,
+      "fetched_at": "2026-06-13T22:40:22+09:00",
+      "sha256": "883DDCC7958CEF9A21208595DF3FF672425F0DFBCF7B9BEACCF05DAFF670C4DA",
+      "source_priority": 3,
+      "notes": "Used only as supporting FAQ evidence for edge cases and tie-break explanations, not as the primary scoring table source."
+    },
+    {
+      "id": "applyhome_faq_raw_2026",
+      "source_name": "청약Home FAQ raw JSON",
+      "source_url": "https://www.applyhome.co.kr",
+      "file_path": "data/applyhome_faq_raw.json",
+      "external_file_name": null,
+      "effective_date": null,
+      "fetched_at": "2026-06-15T00:00:00+09:00",
+      "sha256": "ECC330C68A28586268DA3E07C7660AE396A2CAB8AA621476C289750ED70B78E7",
+      "source_priority": 3,
+      "notes": "Raw FAQ source carried for RAG and demo verification from the Node5 integration branch."
+    },
+    {
+      "id": "applyhome_2024_subscription_faq_pdf",
+      "source_name": "2024 주택청약 FAQ PDF",
+      "source_url": null,
+      "file_path": "data/2024_주택청약_FAQ.pdf",
+      "external_file_name": null,
+      "effective_date": "2024",
+      "fetched_at": "2026-06-15T00:00:00+09:00",
+      "sha256": "76675664FFF92B440D6D912D00F900B66CFA65A4073500E8D60A11A3197FC24C",
+      "source_priority": 3,
+      "notes": "FAQ source used by RAG/demo flows; not a primary scoring table source."
+    },
+    {
+      "id": "lh_general_supply_guide_pdf",
+      "source_name": "LH청약플러스 분양가이드 신청자격-일반공급 PDF",
+      "source_url": "https://apply.lh.or.kr",
+      "file_path": "data/guide_general.pdf",
+      "external_file_name": null,
+      "effective_date": null,
+      "fetched_at": "2026-06-15T00:00:00+09:00",
+      "sha256": "CF093762B92D25F78643C83B0A4AE041B8F76C6CE949D885D492DA95493B7EC9",
+      "source_priority": 2,
+      "notes": "General-supply guide source for RAG and Node5 timing explanations."
+    },
+    {
+      "id": "lh_subscription_procedure_guide_pdf",
+      "source_name": "LH청약플러스 분양가이드 청약절차 PDF",
+      "source_url": "https://apply.lh.or.kr",
+      "file_path": "data/guide_procedure.pdf",
+      "external_file_name": null,
+      "effective_date": null,
+      "fetched_at": "2026-06-15T00:00:00+09:00",
+      "sha256": "972F9FE7875EF4C7DB0F5B6A0C22EE76B4FF9E3DAC4DF050E88332ABE956B9FC",
+      "source_priority": 3,
+      "notes": "Procedure guide source for RAG/demo explanations."
+    },
+    {
+      "id": "lh_transfer_supply_guide_pdf",
+      "source_name": "LH청약플러스 분양가이드 전매/거주의무 PDF",
+      "source_url": "https://apply.lh.or.kr",
+      "file_path": "data/guide_transfer.pdf",
+      "external_file_name": null,
+      "effective_date": null,
+      "fetched_at": "2026-06-15T00:00:00+09:00",
+      "sha256": "7D5A50172095DEBEE3600F1ECCC6E1D4FB6D2CCE9D1B7407A561CEA94A4B4A98",
+      "source_priority": 3,
+      "notes": "Transfer restriction and residence-obligation guide source for RAG/demo explanations."
+    },
+    {
+      "id": "housing_supply_business_manual_pdf",
+      "source_name": "주택공급 업무 매뉴얼 PDF",
+      "source_url": null,
+      "file_path": "data/주택공급_업무_매뉴얼.pdf",
+      "external_file_name": null,
+      "effective_date": null,
+      "fetched_at": "2026-06-15T00:00:00+09:00",
+      "sha256": "F0C081F8D1FB65D42E4BB59646FC67685C3CA73F5E2254E040DF67184DA85E6C",
+      "source_priority": 2,
+      "notes": "Manual source carried for RAG and official-rule cross-checks."
+    }
+  ]
+}
