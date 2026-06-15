@@ -20,7 +20,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langchain_community.tools import DuckDuckGoSearchRun
 
 # 기존 리트리버 모듈 활용
-from src.rag.retriever import search, format_source
+from retriever import search, format_source
 
 load_dotenv()
 
