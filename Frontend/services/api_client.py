@@ -152,59 +152,9 @@ def check_api_connection() -> dict[str, Any]:
 
 
 def _normalize_profile_response(response: dict[str, Any]) -> dict[str, Any]:
-    """Adapt clean-branch /api/profile responses to the existing result UI."""
+    """Adapt profile responses to the result UI."""
     if "candidate_supply_types" in response or response.get("result_mode"):
         return response
-
-    if response.get("node1") or response.get("node2"):
-        node2 = response.get("node2") or {}
-        node3 = response.get("node3") or {}
-        node6 = response.get("node6") or {}
-        final_report = node6.get("final_report") or {}
-        available_supplies = node2.get("ranked_supplies") or (
-            (node2.get("supply_analysis") or {}).get("ranked_supplies")
-            or (node2.get("supply_analysis") or {}).get("available_supplies")
-            or []
-        )
-
-        return {
-            "result_mode": "LANGGRAPH_PROFILE",
-            "result_status": _profile_result_status(node3),
-            "candidate_supply_types": [
-                {
-                    "supply_type": item.get("type"),
-                    "status": "추천"
-                    if item.get("type") == node2.get("recommended_supply")
-                    else "검토 가능",
-                    "reasons": [
-                        f"순위: {item.get('rank', '-')}",
-                        f"방식: {item.get('method')}",
-                        _score_text(item),
-                        str(item.get("reason") or ""),
-                    ],
-                    "missing_checks": [],
-                    "next_questions": [],
-                    "source_refs": [],
-                }
-                for item in available_supplies
-            ],
-            "blocked_reasons": [],
-            "missing_inputs": node3.get("required_inputs", []) if node3.get("awaiting_input") else [],
-            "next_questions": [],
-            "next_actions": final_report.get("next_steps") or [],
-            "guide_message": final_report.get("summary")
-            or "LangGraph 진단 결과를 수신했습니다.",
-            "warnings": final_report.get("warnings") or [],
-            "profile": response.get("profile", {}),
-            "node1": response.get("node1"),
-            "node2": node2,
-            "node3": node3,
-            "node4": response.get("node4"),
-            "node5": response.get("node5"),
-            "node6": node6,
-            "backend_status": response.get("status"),
-            "session_id": response.get("session_id"),
-        }
 
     if "supply_rank" in response or "recommended_supply" in response:
         supply_rank = response.get("supply_rank") or []
@@ -215,10 +165,8 @@ def _normalize_profile_response(response: dict[str, Any]) -> dict[str, Any]:
                 {
                     "supply_type": item.get("type") if isinstance(item, dict) else str(item),
                     "status": "추천"
-                    if (
-                        isinstance(item, dict)
-                        and item.get("type") == response.get("recommended_supply")
-                    )
+                    if isinstance(item, dict)
+                    and item.get("type") == response.get("recommended_supply")
                     else "검토 가능",
                     "reasons": [str(item.get("reason") or "")] if isinstance(item, dict) else [],
                     "missing_checks": [],
@@ -240,7 +188,6 @@ def _normalize_profile_response(response: dict[str, Any]) -> dict[str, Any]:
             "backend_status": response.get("status"),
         }
 
-    profile = response.get("profile", {})
     return {
         "result_mode": "PROFILE_ACCEPTED",
         "result_status": "입력 수신 완료",
@@ -251,13 +198,7 @@ def _normalize_profile_response(response: dict[str, Any]) -> dict[str, Any]:
         "next_actions": ["백엔드가 profile 입력을 정상 수신했습니다."],
         "guide_message": "프로필 응답을 수신했습니다.",
         "warnings": [],
-        "profile": profile,
-        "node1": response.get("node1"),
-        "node2": response.get("node2"),
-        "node3": response.get("node3"),
-        "node4": response.get("node4"),
-        "node5": response.get("node5"),
-        "node6": response.get("node6"),
+        "profile": response.get("profile", {}),
         "backend_status": response.get("status"),
         "session_id": response.get("session_id"),
     }
@@ -266,8 +207,12 @@ def _normalize_profile_response(response: dict[str, Any]) -> dict[str, Any]:
 def _normalize_resume_response(response: dict[str, Any]) -> dict[str, Any]:
     """Adapt /api/simulate and /api/announcement responses to the result UI."""
     report = response.get("report") if isinstance(response.get("report"), dict) else {}
-    summary = report.get("summary") or response.get("message") or "백엔드 그래프 응답을 받았습니다."
-    next_steps = report.get("next_steps") or []
+    summary = (
+        report.get("summary")
+        or report.get("strategy")
+        or response.get("message")
+        or "백엔드 그래프 응답을 받았습니다."
+    )
     return {
         "result_mode": "ANNOUNCEMENT_FLOW",
         "result_status": response.get("status", "success"),
@@ -275,27 +220,18 @@ def _normalize_resume_response(response: dict[str, Any]) -> dict[str, Any]:
         "blocked_reasons": [],
         "missing_inputs": [],
         "next_questions": [],
-        "next_actions": next_steps,
+        "next_actions": report.get("next_steps") or [],
         "guide_message": summary,
         "warnings": [],
         "report": report,
+        "profile": response.get("profile", {}),
+        "announcement": response.get("announcement", {}),
+        "recommended_supply": response.get("recommended_supply") or report.get("recommended_supply"),
+        "supply_rank": response.get("supply_rank") or report.get("supply_rank") or [],
+        "supply_analysis": response.get("supply_analysis", {}),
+        "available_supply_types": response.get("available_supply_types", []),
+        "node5": response.get("node5", {}),
+        "node6": response.get("node6") or {"final_report": report},
         "session_id": response.get("session_id"),
         "backend_status": response.get("status"),
     }
-
-
-def _score_text(item: dict[str, Any]) -> str:
-    score = item.get("score")
-    max_score = item.get("max_score")
-    if score is None or max_score is None:
-        return "점수: 추정/별도 기준"
-    return f"점수: {score}/{max_score}"
-
-
-def _profile_result_status(node3: dict[str, Any]) -> str:
-    route = node3.get("route")
-    if route == "detailed":
-        return "상세 진단 완료"
-    if route == "awaiting_announcement":
-        return "공고 정보 입력 필요"
-    return "기본 진단 완료"

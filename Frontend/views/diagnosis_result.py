@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import streamlit as st
 
 from components.ui import render_result
@@ -57,6 +59,8 @@ def render_result_step() -> None:
         st.json(st.session_state.get("last_backend_payload"))
         st.markdown("초기 상세 입력 payload")
         st.json(st.session_state.get("last_detail_payload"))
+        st.markdown("최종 응답")
+        st.json(response)
 
 
 def run_diagnosis(form: DiagnosisForm) -> None:
@@ -105,60 +109,121 @@ def run_diagnosis(form: DiagnosisForm) -> None:
     st.session_state.pop("last_detail_response", None)
 
 
-def render_langgraph_result(response: dict) -> None:
-    if not response.get("node2") and not response.get("report"):
+def render_langgraph_result(response: dict[str, Any]) -> None:
+    report = _report_from_response(response)
+    node5 = response.get("node5") if isinstance(response.get("node5"), dict) else {}
+    if not report and not node5 and not response.get("node2"):
         return
 
-    node1 = response.get("node1") or {}
-    node2 = response.get("node2") or {}
-    node3 = response.get("node3") or {}
-    node5 = response.get("node5") or {}
-    node6 = response.get("node6") or {}
-    report = response.get("report") or node6.get("final_report") or {}
+    _render_recommendation(response, report)
+    _render_supply_rank(response, report)
+    _render_announcement(report, response)
+    _render_finance(report, node5)
+    _render_strategy(report, node5)
 
-    if node2:
-        st.markdown("### LangGraph 진단 요약")
-        cols = st.columns(3)
-        cols[0].metric("추천 유형", node2.get("recommended_supply", "-"))
-        cols[1].metric("상세 경로", node3.get("route", "-"))
-        cols[2].metric("검토 필요", "예" if node1.get("node1_need_review") else "아니오")
 
-        available = node1.get("node1_available_supply_types") or []
-        if available:
-            st.markdown("#### 지원 가능 공급 유형")
-            st.write(", ".join(str(item) for item in available))
+def _report_from_response(response: dict[str, Any]) -> dict[str, Any]:
+    report = response.get("report")
+    if isinstance(report, dict) and report:
+        return report
+    node6 = response.get("node6")
+    if isinstance(node6, dict) and isinstance(node6.get("final_report"), dict):
+        return node6["final_report"]
+    return {}
 
-        available_supplies = (
+
+def _render_recommendation(response: dict[str, Any], report: dict[str, Any]) -> None:
+    recommended = (
+        report.get("recommended_supply")
+        or response.get("recommended_supply")
+        or (response.get("node2") or {}).get("recommended_supply")
+    )
+    report_type = report.get("report_type") or response.get("result_mode")
+    if not recommended and not report_type:
+        return
+
+    st.markdown("### 추천 및 자격 요약")
+    cols = st.columns(3)
+    cols[0].metric("추천 공급유형", recommended or "-")
+    cols[1].metric("리포트 유형", _report_type_label(report_type))
+    cols[2].metric("처리 상태", response.get("result_status", "-"))
+
+
+def _render_supply_rank(response: dict[str, Any], report: dict[str, Any]) -> None:
+    supply_rank = report.get("supply_rank") or response.get("supply_rank") or []
+    if not supply_rank:
+        node2 = response.get("node2") or {}
+        supply_rank = (
             node2.get("ranked_supplies")
             or ((node2.get("supply_analysis") or {}).get("ranked_supplies") or [])
             or ((node2.get("supply_analysis") or {}).get("available_supplies") or [])
         )
-        if available_supplies:
-            st.markdown("#### 공급 유형별 추천 순위")
-            st.dataframe(available_supplies, use_container_width=True)
+    if supply_rank:
+        st.markdown("#### 공급유형별 결과")
+        st.dataframe(supply_rank, use_container_width=True)
 
-        if node2.get("recommendation_reason"):
-            st.markdown("#### 추천 사유")
-            st.write(node2["recommendation_reason"])
 
-    if node5:
-        st.markdown("#### 상세 공고 기반 자금 분석")
-        announcement = (response.get("node4") or {}).get("announcement") or report.get("announcement") or {}
-        loan = node5.get("loan_result") or {}
-        investment = node5.get("investment_result") or {}
-        risk = node5.get("risk_result") or {}
-        cols = st.columns(4)
-        cols[0].metric("분양가", _money(announcement.get("price") or investment.get("price")))
-        cols[1].metric("대출 가능액", _money(loan.get("loan_amount")))
-        cols[2].metric("실투자금", _money(investment.get("real_investment")))
-        cols[3].metric("자금 리스크", risk.get("risk_level", "-"))
+def _render_announcement(report: dict[str, Any], response: dict[str, Any]) -> None:
+    announcement = report.get("announcement") or response.get("announcement") or {}
+    if not isinstance(announcement, dict) or not announcement:
+        return
+    st.markdown("#### 공고 분석")
+    cols = st.columns(4)
+    cols[0].metric("지역", announcement.get("region") or "-")
+    cols[1].metric("공급유형", announcement.get("supply_type") or "-")
+    cols[2].metric("면적", str(announcement.get("area") or "-"))
+    cols[3].metric("공급 세대", str(announcement.get("supply_count") or "-"))
 
-    if report.get("summary"):
+
+def _render_finance(report: dict[str, Any], node5: dict[str, Any]) -> None:
+    finance = report.get("finance") if isinstance(report.get("finance"), dict) else {}
+    loan = node5.get("loan_result") if isinstance(node5.get("loan_result"), dict) else {}
+    investment = (
+        node5.get("investment_result")
+        if isinstance(node5.get("investment_result"), dict)
+        else {}
+    )
+    risk = node5.get("risk_result") if isinstance(node5.get("risk_result"), dict) else {}
+
+    price = finance.get("price") or investment.get("price")
+    loan_amount = finance.get("loan_amount") or loan.get("loan_amount")
+    real_investment = finance.get("real_investment") or investment.get("real_investment")
+    risk_level = finance.get("risk_level") or risk.get("risk_level")
+    risk_description = finance.get("risk_description") or risk.get("description")
+
+    if not any([price, loan_amount, real_investment, risk_level, risk_description]):
+        return
+
+    st.markdown("#### 재무 분석")
+    cols = st.columns(4)
+    cols[0].metric("분양가", _money(price))
+    cols[1].metric("대출 가능액", _money(loan_amount))
+    cols[2].metric("실투자금", _money(real_investment))
+    cols[3].metric("자금 리스크", risk_level or "-")
+    if risk_description:
+        st.caption(str(risk_description))
+
+
+def _render_strategy(report: dict[str, Any], node5: dict[str, Any]) -> None:
+    summary = report.get("summary")
+    strategy = report.get("strategy") or node5.get("agent_result")
+    if summary:
         st.markdown("#### 최종 리포트")
-        st.write(report["summary"])
+        st.write(summary)
+    if strategy:
+        st.markdown("#### 최종 전략")
+        st.write(strategy)
 
 
-def _money(value) -> str:
-    if isinstance(value, int):
-        return f"{value:,}원"
+def _report_type_label(value: Any) -> str:
+    if value == "detailed":
+        return "공고 상세"
+    if value == "simple":
+        return "기본"
+    return str(value or "-")
+
+
+def _money(value: Any) -> str:
+    if isinstance(value, (int, float)):
+        return f"{int(value):,}원"
     return "-"

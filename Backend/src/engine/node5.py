@@ -171,6 +171,22 @@ def run_node5(state: Node5State) -> Node5State:
    - bankbook_join_date: {profile.get('bankbook_join_date')}
    - is_regulated: {announcement.get('is_regulated')}
    - supply_type: {announcement.get('supply_type')}
+
+[당첨 확률 표시 규칙]
+- calculate_winning_probability 결과를 사용자에게 보여줄 때, winning_score나 breakdown 숫자는 절대 노출하지 마세요.
+- 다음 형식으로만 작성하세요.
+  당첨 가능성: (결과의 probability 값을 그대로 적으세요, 예: 상/중/하)
+  판단 근거:
+  - (결과의 reasons 리스트에 있는 각 문장을 하나씩 불릿으로)
+  - (결과에 context_note가 있다면 마지막 불릿으로 추가)
+- 결과의 methodology_notice 내용을 이 섹션 바로 아래에 작은 안내문으로 반드시 포함하세요.
+
+[결론 작성 규칙]
+- 자금 리스크가 "높음"인 경우, "적극적으로 청약에 참여하라"는 식의 권고를 절대 사용하지 마세요.
+  대신 "청약 자격 자체는 충분하나, 실투자금 대비 자금 부담이 크므로 중도금 대출이나 추가 자금 조달 계획을 사전에 점검해야 한다"는 방향으로 결론을 작성하세요.
+- 자금 리스크가 "중간"인 경우, "자격은 양호하나 자금 여유가 제한적이니 비상 자금을 확보해두는 것을 권장한다"는 균형 잡힌 결론을 작성하세요.
+- 자금 리스크가 "낮음"인 경우에만 "적극적으로 참여하라"는 권고를 사용하세요.
+- 결론은 반드시 위에서 제시된 자금 리스크 수준({risk_result['risk_level']})과 논리적으로 일치해야 합니다.
 """
 
     agent_response = agent.invoke({

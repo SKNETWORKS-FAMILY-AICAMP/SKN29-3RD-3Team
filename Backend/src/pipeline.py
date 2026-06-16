@@ -137,11 +137,7 @@ def resume_pipeline(session_id: str, simulate: bool) -> dict[str, Any]:
             "message": "공고문 정보를 입력해주세요.",
         }
 
-    return {
-        "status": "success",
-        "session_id": session_id,
-        "report": state.values.get("final_report", {}),
-    }
+    return _build_resume_response("success", session_id, state.values)
 
 
 def resume_with_announcement(session_id: str, announcement_text: str) -> dict[str, Any]:
@@ -157,8 +153,27 @@ def resume_with_announcement(session_id: str, announcement_text: str) -> dict[st
 
     state = pipeline.get_state(config)
 
+    return _build_resume_response("success", session_id, state.values)
+
+
+def _build_resume_response(status: str, session_id: str, values: dict[str, Any]) -> dict[str, Any]:
+    """Return the final graph state in an API-friendly shape for the frontend."""
+    node5 = {
+        "loan_result": values.get("loan_result", {}),
+        "investment_result": values.get("investment_result", {}),
+        "risk_result": values.get("risk_result", {}),
+        "agent_result": values.get("agent_result", ""),
+    }
     return {
-        "status": "success",
+        "status": status,
         "session_id": session_id,
-        "report": state.values.get("final_report", {}),
+        "report": values.get("final_report", {}),
+        "profile": values.get("profile", {}),
+        "announcement": values.get("announcement", {}),
+        "available_supply_types": values.get("available_supply_types", []),
+        "supply_analysis": values.get("supply_analysis", {}),
+        "supply_rank": values.get("supply_rank", []),
+        "recommended_supply": values.get("recommended_supply"),
+        "node5": node5,
+        "node6": {"final_report": values.get("final_report", {})},
     }
