@@ -210,6 +210,26 @@
 - 검증:
   - `python -m py_compile Frontend/components/ui.py Frontend/views/diagnosis_result.py` 통과.
 
+#### 10. 추적 중인 Python 캐시 파일 제거
+
+- 파일/경로:
+  - `Backend/**/__pycache__/*.pyc`
+  - `Frontend/**/__pycache__/*.pyc`
+  - `.gitignore`
+- 목적:
+  - `final` 브랜치에 이미 올라간 Python 실행 캐시 파일을 PR에서 제거하기 위함.
+  - 이후 같은 캐시 파일이 다시 추적되지 않도록 `.gitignore`를 보정하기 위함.
+- 변경 내용:
+  - Git이 추적 중이던 `*.pyc` 파일을 삭제.
+  - `.gitignore`의 `__pycachec__/` 오타를 `__pycache__/`로 수정.
+  - `__init__.py`는 패키지 구성에 필요할 수 있으므로 삭제 대상에서 제외.
+  - `.gitignore`에서 `__init__.py` 무시 규칙 제거.
+- 역할:
+  - PR에 불필요한 Python 캐시 바이너리가 포함되지 않도록 정리.
+  - 향후 패키지 초기화 파일은 정상적으로 추적 가능하게 함.
+- 검증:
+  - `git ls-files "*.pyc"` 결과 없음.
+
 ## 앞으로 기록할 항목
 
 새 변경이 생기면 아래 형식으로 누적한다.
