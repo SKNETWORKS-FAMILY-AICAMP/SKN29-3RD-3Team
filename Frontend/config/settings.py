@@ -5,13 +5,11 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from functools import lru_cache
+
 from dotenv import load_dotenv
-from pathlib import Path
 
-# 최상위 폴더의 .env 로드
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
-print("API URL:", os.getenv("CHEONGYAK_API_BASE_URL"))
+load_dotenv()
 
 @dataclass(frozen=True)
 class FrontendSettings:
@@ -38,6 +36,6 @@ def load_settings() -> FrontendSettings:
 
     return FrontendSettings(
         api_mode=api_mode,
-        api_base_url=os.getenv("CHEONGYAK_API_BASE_URL", "http://192.168.0.27:8000").rstrip("/"),
+        api_base_url=os.getenv("CHEONGYAK_API_BASE_URL", "http://127.0.0.1:8000").rstrip("/"),
         api_timeout_seconds=_float_env("CHEONGYAK_API_TIMEOUT_SECONDS", 60.0),
     )

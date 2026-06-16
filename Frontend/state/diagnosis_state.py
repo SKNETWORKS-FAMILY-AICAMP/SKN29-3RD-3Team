@@ -13,6 +13,7 @@ STEPS = [
     ("housing", "주택/세대"),
     ("family", "혼인/자녀"),
     ("optional", "선택 정보"),
+    ("announcement", "공고 정보"),
     ("result", "결과"),
 ]
 
@@ -31,8 +32,8 @@ def build_form_from_state() -> DiagnosisForm:
     return DiagnosisForm(
         bankbook_type=st.session_state.get("bankbook_type"),
         bankbook_join_date=st.session_state.get("bankbook_join_date"),
-        bankbook_payments=int(st.session_state.get("bankbook_payments") or 0),
-        bankbook_balance=int(st.session_state.get("bankbook_balance") or 0),
+        bankbook_payments=int(st.session_state.get("bankbook_payments", 0)),
+        bankbook_balance=int(st.session_state.get("bankbook_balance", 0)),
         region=st.session_state.get("region"),
         is_homeless=st.session_state.get("is_homeless"),
         homeless_period_years=st.session_state.get("homeless_period_years")
@@ -42,17 +43,17 @@ def build_form_from_state() -> DiagnosisForm:
         num_household_members=st.session_state.get("num_household_members")
         if st.session_state.get("is_household_head") is True
         else None,
-        birth_year=int(st.session_state.get("birth_year") or 1990),
+        birth_year=int(st.session_state.get("birth_year", 1990)),
         marital_status=st.session_state.get("marital_status"),
         child_status=child_status,
         minor_children_status=minor_children_status,
-        average_monthly_income=int(st.session_state.get("average_monthly_income") or 0)
+        average_monthly_income=int(st.session_state.get("average_monthly_income", 0))
         if include_income
         else None,
         has_property_history=st.session_state.get("has_property_history")
         if include_property_history
         else None,
-        total_assets=int(st.session_state.get("total_assets") or 0) if include_assets else None,
+        total_assets=int(st.session_state.get("total_assets", 0)) if include_assets else None,
     )
 
 
@@ -79,6 +80,24 @@ def build_detail_payload() -> dict[str, str | None]:
     return {
         field: st.session_state.get(detail_widget_key(field))
         for field in DETAIL_FIELD_OPTIONS
+    }
+
+
+def build_announcement_payload() -> dict | None:
+    if not st.session_state.get("include_announcement"):
+        return None
+    return {
+        "region": st.session_state.get("announcement_region") or "",
+        "is_regulated": bool(st.session_state.get("announcement_is_regulated")),
+        "supply_type": st.session_state.get("announcement_supply_type") or "UNKNOWN",
+        "price": int(st.session_state.get("announcement_price", 0)),
+        "deposit": (
+            int(st.session_state.get("announcement_deposit", 0))
+            if int(st.session_state.get("announcement_deposit", 0)) > 0
+            else None
+        ),
+        "area": st.session_state.get("announcement_area") or "",
+        "supply_count": int(st.session_state.get("announcement_supply_count", 0)),
     }
 
 

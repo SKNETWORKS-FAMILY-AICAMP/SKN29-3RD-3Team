@@ -6,10 +6,10 @@ import streamlit as st
 
 from config.settings import load_settings
 from state.diagnosis_state import STEPS
-from views.chatbot_panel import render_chatbot_panel
 from views.diagnosis_result import render_result_step
 from views.diagnosis_steps import (
     render_account_step,
+    render_announcement_step,
     render_family_step,
     render_housing_step,
     render_navigation,
@@ -19,13 +19,7 @@ from views.diagnosis_steps import (
 
 
 def render_diagnosis_workspace() -> None:
-    guide_col, chat_col = st.columns([2, 1], gap="large")
-
-    with guide_col:
-        render_self_diagnosis_guide()
-
-    with chat_col:
-        render_chatbot_panel()
+    render_self_diagnosis_guide()
 
 
 def render_self_diagnosis_guide() -> None:
@@ -36,25 +30,27 @@ def render_self_diagnosis_guide() -> None:
     st.markdown(
         """
         <div class="cy-guide">
-          <strong>자가진단 가이드</strong><br/>
-          필수 조건을 단계별로 입력합니다. 선택 정보는 비워두고 결과로 넘어갈 수 있습니다.
+          <strong>자가진단 가이드</strong>
+          필수 조건만 입력해도 진단을 진행할 수 있습니다. 모르는 항목은 비워두고 다음 단계로 넘어갈 수 있어요.
         </div>
         """,
         unsafe_allow_html=True,
     )
-    render_api_status()
     render_stepper(step_index)
 
-    if step_key == "account":
-        render_account_step()
-    elif step_key == "housing":
-        render_housing_step()
-    elif step_key == "family":
-        render_family_step()
-    elif step_key == "optional":
-        render_optional_step()
-    elif step_key == "result":
-        render_result_step()
+    with st.container(border=True):
+        if step_key == "account":
+            render_account_step()
+        elif step_key == "housing":
+            render_housing_step()
+        elif step_key == "family":
+            render_family_step()
+        elif step_key == "optional":
+            render_optional_step()
+        elif step_key == "announcement":
+            render_announcement_step()
+        elif step_key == "result":
+            render_result_step()
 
     render_navigation(step_index)
 

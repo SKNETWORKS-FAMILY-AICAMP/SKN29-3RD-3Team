@@ -7,48 +7,195 @@ from typing import Any
 
 import streamlit as st
 
+from config.settings import load_settings
+from services.api_client import check_api_connection
+
+
+CHATBOT_PAGE = "pages/2_FAQ_챗봇.py"
+DIAGNOSIS_PAGE = "pages/1_청약_자가진단.py"
+HOME_PAGE = "streamlit_app.py"
+
 
 def set_page_style() -> None:
-    st.set_page_config(page_title="청약 자가진단", page_icon="🏠", layout="wide")
+    st.set_page_config(page_title="청약 자가진단", page_icon="청", layout="wide")
     st.markdown(
         """
         <style>
+        :root {
+            --cy-navy: #172033;
+            --cy-blue: #2558a8;
+            --cy-blue-soft: #eef4ff;
+            --cy-line: #d8e0ee;
+            --cy-muted: #667085;
+            --cy-bg: #f6f8fb;
+        }
+        .stApp {
+            background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 62%, #f4f7fb 100%);
+        }
         .block-container {
-            max-width: 1180px;
-            padding-top: 1.75rem;
+            max-width: 1120px;
+            padding-top: 1.05rem;
             padding-bottom: 4rem;
         }
-        .cy-header {
-            border-bottom: 1px solid #d8e0ee;
-            padding-bottom: 1rem;
-            margin-bottom: 1.25rem;
+        .cy-hero-divider {
+            border-bottom: 1px solid var(--cy-line);
+            padding-bottom: .9rem;
+            margin-bottom: 1.1rem;
         }
-        .cy-header h1 {
-            margin: 0 0 .35rem;
-            color: #1f2937;
-            font-size: 2rem;
+        .cy-hero-text h1 {
+            margin: 0 0 .4rem;
+            color: var(--cy-navy);
+            font-size: 2.15rem;
+            line-height: 1.2;
             letter-spacing: 0;
         }
-        .cy-header p {
-            color: #667085;
+        .cy-hero-text p {
+            color: var(--cy-muted);
             margin: 0;
+            font-size: 1.02rem;
+            line-height: 1.55;
+        }
+        .cy-home {
+            padding: 2.2rem 0 1.35rem;
+        }
+        .cy-home h2 {
+            margin: 0 0 .8rem;
+            color: var(--cy-navy);
+            font-size: 2.35rem;
+            line-height: 1.18;
+            letter-spacing: 0;
+        }
+        .cy-home p {
+            max-width: 720px;
+            color: #475467;
+            font-size: 1.05rem;
+            line-height: 1.7;
+        }
+        .cy-feature-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: .8rem;
+            margin: 1.5rem 0 1.25rem;
+        }
+        .cy-feature {
+            border: 1px solid var(--cy-line);
+            border-radius: 10px;
+            padding: 1rem;
+            background: #ffffff;
+            box-shadow: 0 8px 22px rgba(24, 40, 72, .05);
+        }
+        .cy-feature strong {
+            display: block;
+            margin-bottom: .35rem;
+            color: var(--cy-navy);
+        }
+        .cy-feature span {
+            color: var(--cy-muted);
+            font-size: .92rem;
+            line-height: 1.5;
         }
         .cy-guide {
-            border: 1px solid #d8e0ee;
-            border-radius: 8px;
-            padding: 1rem;
-            background: #f8fafc;
-            margin-bottom: 1rem;
+            border: 1px solid var(--cy-line);
+            border-radius: 10px;
+            padding: .95rem 1.05rem;
+            background: #ffffff;
+            margin-bottom: .8rem;
+            color: #344054;
+            box-shadow: 0 8px 22px rgba(24, 40, 72, .05);
         }
-        .cy-chat-panel {
-            border: 1px solid #d8e0ee;
+        .cy-guide strong {
+            display: block;
+            color: var(--cy-navy);
+            margin-bottom: .25rem;
+        }
+        .cy-stepper {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: .4rem;
+            margin: .75rem 0 1rem;
+        }
+        .cy-step {
+            display: inline-flex;
+            align-items: center;
+            min-height: 2.05rem;
+            padding: .35rem .68rem;
+            border: 1px solid var(--cy-line);
+            border-radius: 999px;
+            color: #8a94a6;
+            background: #ffffff;
+            font-size: .88rem;
+            line-height: 1.2;
+        }
+        .cy-step-active {
+            border-color: var(--cy-blue);
+            color: #12356f;
+            background: var(--cy-blue-soft);
+            font-weight: 800;
+            box-shadow: 0 5px 14px rgba(37, 88, 168, .13);
+        }
+        .cy-step-arrow {
+            color: #b7c0d0;
+            font-size: .85rem;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            border-color: var(--cy-line);
+            border-radius: 10px;
+            box-shadow: 0 8px 22px rgba(24, 40, 72, .05);
+            background: #ffffff;
+        }
+        .cy-chat-kicker {
+            color: var(--cy-muted);
+            font-size: .94rem;
+            line-height: 1.5;
+            margin-bottom: .75rem;
+        }
+        .cy-chat-empty {
+            color: #98a2b3;
+            padding: .75rem;
+        }
+        div[data-testid="stForm"] {
+            border: 0;
+            padding: 0;
+            background: transparent;
+        }
+        div[data-testid="stForm"] div.stButton > button {
+            min-height: 2.8rem;
+            border-radius: 999px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            padding: 0;
+        }
+        .cy-linked-question {
+            border: 1px solid #b8cdf8;
+            background: var(--cy-blue-soft);
+            color: #1d3f7a;
             border-radius: 8px;
-            padding: 1rem;
-            background: white;
+            padding: .75rem .85rem;
+            margin-bottom: .9rem;
         }
         div.stButton > button {
             min-height: 2.65rem;
             white-space: normal;
+            border-radius: 8px;
+        }
+        div[data-baseweb="select"] > div,
+        div[data-baseweb="input"] > div,
+        textarea {
+            border-radius: 8px;
+        }
+        [data-testid="stSidebarNav"],
+        section[data-testid="stSidebar"] nav,
+        section[data-testid="stSidebar"] div[data-testid="stSidebarNav"] {
+            display: none !important;
+        }
+        @media (max-width: 760px) {
+            .cy-feature-row {
+                grid-template-columns: 1fr;
+            }
+            .cy-home h2 {
+                font-size: 1.85rem;
+            }
         }
         </style>
         """,
@@ -57,15 +204,102 @@ def set_page_style() -> None:
 
 
 def render_app_header() -> None:
+    title_col, beta_col = st.columns([8.5, 1.5])
+    with title_col:
+        st.markdown(
+            """
+            <div class="cy-hero-text">
+            <h1>청약 자가진단</h1>
+            <p>내 조건을 입력하면 가능한 공급 유형과 특별공급 가능성을 확인할 수 있어요.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with beta_col:
+        settings = load_settings()
+        if hasattr(st, "popover"):
+            with st.popover("Beta", use_container_width=True):
+                st.caption("현재는 로컬 FastAPI와 연결해 검증 중인 베타 화면입니다.")
+                st.caption(f"API: {settings.api_mode} / {settings.api_base_url}")
+        else:
+            with st.expander("Beta", expanded=False):
+                st.caption("현재는 로컬 FastAPI와 연결해 검증 중인 베타 화면입니다.")
+                st.caption(f"API: {settings.api_mode} / {settings.api_base_url}")
+    st.markdown('<div class="cy-hero-divider"></div>', unsafe_allow_html=True)
+
+
+def render_home_screen() -> None:
     st.markdown(
         """
-        <div class="cy-header">
-          <h1>청약 자가진단</h1>
-          <p>카드형 선택지로 조건을 정리하고, 오른쪽 챗봇에서 질문을 이어갑니다.</p>
-        </div>
+        <section class="cy-home">
+          <h2>청약 조건을 먼저 정리해 보세요</h2>
+          <p>
+            통장, 무주택, 세대, 혼인, 자녀 조건을 단계별로 입력하면
+            지원 가능성이 있는 공급 유형과 추가 확인 항목을 한 화면에서 볼 수 있습니다.
+          </p>
+          <div class="cy-feature-row">
+            <div class="cy-feature">
+              <strong>자가진단</strong>
+              <span>필수 조건을 단계별로 입력하고 결과를 확인합니다.</span>
+            </div>
+            <div class="cy-feature">
+              <strong>공고 정보</strong>
+              <span>공고문 기준 상세 시뮬레이션 단계까지 이어서 입력할 수 있습니다.</span>
+            </div>
+            <div class="cy-feature">
+              <strong>챗봇</strong>
+              <span>각 조건이 왜 필요한지 진단 중 바로 질문할 수 있습니다.</span>
+            </div>
+          </div>
+        </section>
         """,
         unsafe_allow_html=True,
     )
+    if st.button("자가진단하러 가기", type="primary", use_container_width=False):
+        st.switch_page(DIAGNOSIS_PAGE)
+
+
+def render_sidebar(active_page: str) -> None:
+    with st.sidebar:
+        st.markdown("### 청약 도우미")
+        st.caption("모드 전환")
+        _sidebar_page_link(HOME_PAGE, "처음 화면", active=active_page == "home")
+        _sidebar_page_link(DIAGNOSIS_PAGE, "자가진단", active=active_page == "diagnosis")
+        _sidebar_page_link(CHATBOT_PAGE, "챗봇", active=active_page == "chatbot")
+        st.divider()
+        render_api_connection_status()
+
+
+def render_api_connection_status() -> None:
+    if st.button("API 상태 새로고침", use_container_width=True):
+        _cached_api_connection_status.clear()
+    status = _cached_api_connection_status()
+    st.markdown("### API 연결")
+    st.caption(status["base_url"])
+
+    if status["ok"]:
+        if status["mode"] == "mock":
+            st.info("Mock 응답 사용 중")
+        else:
+            st.success(f"연결됨 ({status['mode']})")
+        return
+
+    st.error(f"연결 실패 ({status['mode']})")
+    with st.expander("오류 보기", expanded=False):
+        st.write(status["message"])
+
+
+@st.cache_data(ttl=15, show_spinner=False)
+def _cached_api_connection_status() -> dict[str, Any]:
+    return check_api_connection()
+
+
+def _sidebar_page_link(page: str, label: str, *, active: bool) -> None:
+    marker = "●" if active else "○"
+    if hasattr(st, "page_link"):
+        st.page_link(page, label=f"{marker} {label}")
+        return
+    st.markdown(f"{marker} {label}")
 
 
 def card_choice(
@@ -111,10 +345,28 @@ def card_choice(
     return st.session_state.get(key, selected_value)
 
 
-def render_explanation(title: str, items: Sequence[str]) -> None:
+def render_explanation(
+    title: str,
+    items: Sequence[str],
+    *,
+    learn_more_question: str | None = None,
+    learn_more_key: str | None = None,
+) -> None:
     with st.expander(title, expanded=False):
         for item in items:
             st.markdown(f"- {item}")
+        if learn_more_question:
+            button_key = learn_more_key or f"learn_more_{abs(hash(learn_more_question))}"
+            if st.button("더 자세히 알아보기", key=button_key, use_container_width=True):
+                open_chatbot_with_question(learn_more_question)
+
+
+def open_chatbot_with_question(question: str) -> None:
+    st.session_state["pending_chat_question"] = question
+    try:
+        st.switch_page(CHATBOT_PAGE)
+    except Exception:
+        st.info("사이드바에서 FAQ 챗봇을 선택하면 이어서 확인할 수 있습니다.")
 
 
 def _top_supply_rank(response: dict, limit: int = 3) -> list[dict[str, Any]]:
@@ -137,16 +389,12 @@ def render_result(response: dict) -> None:
                     score = item.get("score")
                     max_score = item.get("max_score")
                     if score is None or max_score is None:
-                        st.caption("추첨제/조건형")
+                        st.caption("추첨 또는 별도 기준")
                     else:
                         ratio = item.get("ratio")
                         st.caption(f"{score}/{max_score}점" + (f" ({ratio})" if ratio else ""))
                     if item.get("reason"):
                         st.write(item["reason"])
-
-    if response.get("final_report"):
-        st.subheader("최종 결론")
-        st.markdown(response["final_report"])
 
     st.subheader(f"종합 상태: {response.get('result_status', '추가 확인 필요')}")
     if response.get("result_mode"):

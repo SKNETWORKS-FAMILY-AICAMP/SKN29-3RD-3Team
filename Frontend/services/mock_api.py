@@ -219,15 +219,16 @@ class MockDiagnosisClient:
             "warnings": ["FastAPI 연결 전 임시 상세 진단 결과입니다."],
         }
 
-    def chat(self, question: str) -> dict[str, Any]:
+    def chat(self, question: str, session_id: str | None = None) -> dict[str, Any]:
         return {
             "answer": (
                 "현재는 mock 답변입니다. 필수 조건은 통장 정보, 무주택 여부와 기간, "
                 "세대주 여부와 세대원 수, 출생 연도, 만 19세 미만 자녀 수 범주입니다."
             ),
             "question": question,
-            "sources": [],
-            "session_id": None,
+            "session_id": session_id or "mock-session",
+            "sources": ["청약홈", "주택공급에 관한 규칙"],
+            "source_refs": ["청약홈", "주택공급에 관한 규칙"],
         }
 
 

@@ -154,29 +154,32 @@ def build_backend_compatible_payload(
     form: DiagnosisForm,
     detail_payload: dict[str, str | None] | None = None,
 ) -> dict[str, Any]:
-    return {
-        "profile": {
-            "bankbook_type": form.bankbook_type,
-            "bankbook_join_date": form.bankbook_join_date.isoformat() if form.bankbook_join_date else None,
-            "bankbook_payments": form.bankbook_payments,
-            "bankbook_balance": form.bankbook_balance,
-            "region": form.region,
-            "is_homeless": form.is_homeless,
-            "housing_ownership": form.is_homeless is False,
-            "homeless_period_years": form.homeless_period_years or 0,
-            "is_household_head": form.is_household_head,
-            "num_household_members": form.num_household_members or 0,
-            "marital_status": form.marital_status,
-            "birth_year": form.birth_year,
-            "child_status": form.child_status,
-            "minor_children_status": form.minor_children_status,
-            "is_elderly_parent": detail_payload.get("elderly_support") == "YES" if detail_payload else False,
-            "elderly_parent_years": None,
-            "average_monthly_income": form.average_monthly_income or 0,
-            "has_property_history": form.has_property_history or False,
-            "total_assets": form.total_assets or 0,
-        }
+    profile = build_profile_payload(form)
+    detail = build_profile_detail_payload(form, detail_payload)
+    is_elderly_parent = detail.get("elderly_support") == "MEETS_65_AND_3Y"
+
+    clean_profile = {
+        "bankbook_type": profile["bankbook_type"] or "",
+        "bankbook_join_date": profile["bankbook_join_date"] or "",
+        "bankbook_payments": profile["bankbook_payments"],
+        "bankbook_balance": profile["bankbook_balance"],
+        "region": profile["region"] or "",
+        "is_homeless": bool(profile["is_homeless"]),
+        "housing_ownership": not bool(profile["is_homeless"]),
+        "homeless_period_years": profile["homeless_period_years"] or 0,
+        "is_household_head": bool(profile["is_household_head"]),
+        "num_household_members": profile["num_household_members"] or 0,
+        "marital_status": form.marital_status,
+        "child_status": form.child_status,
+        "birth_year": profile["birth_year"],
+        "minor_children_status": profile["minor_children_status"] or "UNKNOWN",
+        "is_elderly_parent": is_elderly_parent,
+        "elderly_parent_years": 3 if is_elderly_parent else None,
+        "average_monthly_income": profile["average_monthly_income"] or 0,
+        "has_property_history": bool(profile["has_property_history"]),
+        "total_assets": profile["total_assets"] or 0,
     }
+    return {"profile": clean_profile}
 
 def build_profile_detail_payload(
     form: DiagnosisForm,
