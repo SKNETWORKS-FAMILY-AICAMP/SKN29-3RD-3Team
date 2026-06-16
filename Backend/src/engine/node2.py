@@ -81,6 +81,8 @@ def _tool_results(
         tool_inputs,
         candidate_supply_types=available_supply_types,
     )
+
+    print(f"[DEBUG] calculator_result: {calculator_result}")
     return calculator_result.get("tool_results", {})
 
 
@@ -114,7 +116,6 @@ def _build_supply_rank(
 ) -> list[dict[str, Any]]:
     rank = []
 
-    # 점수제 / 추첨제 분리
     scored = [
         s for s in available_supplies
         if s["method"] == "가점제"
@@ -130,7 +131,6 @@ def _build_supply_rank(
     )
 
     if scored and best_ratio >= COMPETITIVENESS_THRESHOLD:
-        # 점수제 1순위
         best = max(scored, key=lambda s: s["score"] / s["max_score"])
         rank.append({
             "rank": 1,
@@ -139,6 +139,7 @@ def _build_supply_rank(
             "max_score": best["max_score"],
             "ratio": f"{best_ratio:.0%}",
             "reason": f"점수 비율 {best_ratio:.0%}로 경쟁력 있음",
+            "method": "가점제",
         })
         for s in lottery:
             rank.append({
@@ -148,9 +149,9 @@ def _build_supply_rank(
                 "max_score": None,
                 "ratio": None,
                 "reason": "추첨제 동등 기회로 병행 고려",
+                "method": "추첨제",
             })
     else:
-        # 추첨제 1순위
         for i, s in enumerate(lottery, 1):
             rank.append({
                 "rank": i,
@@ -159,6 +160,7 @@ def _build_supply_rank(
                 "max_score": None,
                 "ratio": None,
                 "reason": f"점수제 경쟁력({best_ratio:.0%}) 부족, 추첨제 우선 추천",
+                "method": "추첨제",
             })
         if scored:
             best = max(scored, key=lambda s: s["score"] / s["max_score"])
@@ -169,9 +171,9 @@ def _build_supply_rank(
                 "max_score": best["max_score"],
                 "ratio": f"{best_ratio:.0%}",
                 "reason": "보조 전략으로 점수제 병행 가능",
+                "method": "가점제",
             })
 
-    # 일반공급 항상 마지막에 추가
     if general_max_score > 0:
         general_ratio = general_supply_score / general_max_score
         rank.append({
@@ -181,6 +183,7 @@ def _build_supply_rank(
             "max_score": general_max_score,
             "ratio": f"{general_ratio:.0%}",
             "reason": f"가점 {general_supply_score}/{general_max_score}점 ({general_ratio:.0%})",
+            "method": "가점제",
         })
 
     return rank

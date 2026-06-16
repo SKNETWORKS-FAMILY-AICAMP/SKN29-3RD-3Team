@@ -29,37 +29,18 @@ GENERAL_SUPPLY_ALIASES = frozenset(
         "일반공급 가점제",
     }
 )
-NEWLYWED_SPECIAL_ALIASES = frozenset(
-    {
-        "NEWLYWED_SPECIAL",
-        "newlywed",
-        "newlywed_special",
-        "newlywed_special_supply",
-        "신혼부부",
-        "신혼부부 특별공급",
-    }
-)
-MULTI_CHILD_SPECIAL_ALIASES = frozenset(
-    {
-        "MULTI_CHILD_SPECIAL",
-        "multi_child",
-        "multi_child_special",
-        "multi_child_special_supply",
-        "다자녀",
-        "다자녀 특별공급",
-    }
-)
-FIRST_HOME_SPECIAL_ALIASES = frozenset(
-    {
-        "LIFETIME_FIRST_SPECIAL",
-        "FIRST_HOME_SPECIAL",
-        "first_home",
-        "first_home_special",
-        "first_home_special_supply",
-        "생애최초",
-        "생애최초 특별공급",
-    }
-)
+NEWLYWED_SPECIAL_ALIASES = frozenset({
+    "NEWLYWED_SPECIAL", "newlywed", "newlywed_special", "newlywed_special_supply",
+    "신혼부부", "신혼부부 특공", "신혼부부 특별공급",
+})
+MULTI_CHILD_SPECIAL_ALIASES = frozenset({
+    "MULTI_CHILD_SPECIAL", "multi_child", "multi_child_special", "multi_child_special_supply",
+    "다자녀", "다자녀 특공", "다자녀 특별공급",
+})
+FIRST_HOME_SPECIAL_ALIASES = frozenset({
+    "LIFETIME_FIRST_SPECIAL", "FIRST_HOME_SPECIAL", "first_home", "first_home_special", "first_home_special_supply",
+    "생애최초", "생애최초 특공", "생애최초 특별공급",
+})
 
 
 @dataclass(frozen=True)
@@ -132,8 +113,10 @@ def run_calculator_tools(
     skipped: dict[str, str] = {}
 
     for spec in registry:
-        if requested_supply_types and spec.supply_type_aliases.isdisjoint(
-            requested_supply_types
+        if (
+            spec.name != "calculate_housing_subscription_score"
+            and requested_supply_types
+            and spec.supply_type_aliases.isdisjoint(requested_supply_types)
         ):
             skipped[spec.name] = "candidate supply types do not require this tool"
             continue

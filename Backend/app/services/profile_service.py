@@ -1,19 +1,12 @@
 from app.schemas.profile_schema import UserInput
+from src.pipeline import run_pipeline_until_node2
 
 
 def process_profile(user_input: UserInput) -> dict:
     """
-    사용자 입력을 받아 파이프라인에 넘길 State로 변환합니다.
-    현재는 입력값을 그대로 반환하며, 추후 Node 1~6 파이프라인과 연결합니다.
+    사용자 프로필을 받아 Node 1~2 실행 후 인터럽트.
+    supply_rank와 session_id를 반환합니다.
     """
     profile = user_input.profile.model_dump()
-
-    # 추후 파이프라인 연결 시 아래 주석 해제
-    # from src.pipeline import run_pipeline
-    # result = run_pipeline({"profile": profile})
-    # return result
-
-    return {
-        "status": "success",
-        "profile": profile,
-    }
+    result = run_pipeline_until_node2(profile)
+    return result
