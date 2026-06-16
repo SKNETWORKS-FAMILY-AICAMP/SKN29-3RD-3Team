@@ -20,30 +20,14 @@ SPECIAL_SUPPLY_TOOL_BY_TYPE = {
     "생애최초 특공": "check_first_home_special_supply",
 }
 
-SUPPLY_TYPE_ALIASES = {
-    "NEWLYWED_SPECIAL": "신혼부부 특공",
-    "newlywed": "신혼부부 특공",
-    "newlywed_special": "신혼부부 특공",
-    "신혼부부 특별공급": "신혼부부 특공",
-    "신혼부부 특공": "신혼부부 특공",
-    "MULTI_CHILD_SPECIAL": "다자녀 특공",
-    "multi_child": "다자녀 특공",
-    "multi_child_special": "다자녀 특공",
-    "다자녀 특별공급": "다자녀 특공",
-    "다자녀 특공": "다자녀 특공",
-    "LIFETIME_FIRST_SPECIAL": "생애최초 특공",
-    "FIRST_HOME_SPECIAL": "생애최초 특공",
-    "first_home": "생애최초 특공",
-    "first_home_special": "생애최초 특공",
-    "생애최초 특별공급": "생애최초 특공",
-    "생애최초 특공": "생애최초 특공",
-}
-
 SUPPLY_METHOD_BY_TYPE = {
     "신혼부부 특공": "가점제",
     "다자녀 특공": "가점제",
     "생애최초 특공": "추첨제",
 }
+
+# 점수제 특공 경쟁력 기준 (Node 5 strategy_tools.py와 동일)
+COMPETITIVENESS_THRESHOLD = 0.6
 
 
 def node2_recommend_supply(state: Mapping[str, Any]) -> dict[str, Any]:
@@ -59,23 +43,26 @@ def node2_recommend_supply(state: Mapping[str, Any]) -> dict[str, Any]:
     general_supply_score = _as_int(general_result.get("total_score"), default=0)
     general_max_score = _as_int(general_result.get("max_score"), default=84)
 
+    supply_rank = _build_supply_rank(
+        available_supplies, general_supply_score, general_max_score
+    )
+
     return {
-        "recommended_supply": _recommend_supply(available_supplies),
+        # ── State 업데이트용 (Node 5로 전달) ──────────────────────
+        "recommended_supply": supply_rank[0]["type"] if supply_rank else "일반공급",
         "supply_analysis": {
             "available_supplies": available_supplies,
             "general_supply_score": general_supply_score,
             "general_max_score": general_max_score,
         },
+        # ── 프론트 반환용 (FastAPI 인터럽트 시점에 꺼내서 반환) ────
+        "supply_rank": supply_rank,
     }
 
 
 def _available_supply_types(state: Mapping[str, Any]) -> list[str]:
-    raw_values = (
-        state.get("available_supply_types")
-        or state.get("node1_available_supply_types")
-        or []
-    )
-    return [_canonical_supply_type(value) for value in raw_values]
+    raw_values = state.get("available_supply_types") or []
+    return list(raw_values)
 
 
 def _tool_results(
@@ -120,27 +107,83 @@ def _build_supply_analysis_item(
     }
 
 
-def _recommend_supply(available_supplies: list[dict[str, Any]]) -> str:
-    scored_supplies = [
-        supply
-        for supply in available_supplies
-        if isinstance(supply.get("score"), int)
-        and isinstance(supply.get("max_score"), int)
-        and supply["max_score"] > 0
+def _build_supply_rank(
+    available_supplies: list[dict[str, Any]],
+    general_supply_score: int,
+    general_max_score: int,
+) -> list[dict[str, Any]]:
+    rank = []
+
+    # 점수제 / 추첨제 분리
+    scored = [
+        s for s in available_supplies
+        if s["method"] == "가점제"
+        and isinstance(s.get("score"), int)
+        and isinstance(s.get("max_score"), int)
+        and s["max_score"] > 0
     ]
-    if scored_supplies:
-        return max(
-            scored_supplies,
-            key=lambda supply: supply["score"] / supply["max_score"],
-        )["type"]
-    if available_supplies:
-        return available_supplies[0]["type"]
-    return "일반공급"
+    lottery = [s for s in available_supplies if s["method"] == "추첨제"]
 
+    best_ratio = max(
+        (s["score"] / s["max_score"] for s in scored),
+        default=0.0,
+    )
 
-def _canonical_supply_type(value: Any) -> str:
-    text = str(value).strip()
-    return SUPPLY_TYPE_ALIASES.get(text, text)
+    if scored and best_ratio >= COMPETITIVENESS_THRESHOLD:
+        # 점수제 1순위
+        best = max(scored, key=lambda s: s["score"] / s["max_score"])
+        rank.append({
+            "rank": 1,
+            "type": best["type"],
+            "score": best["score"],
+            "max_score": best["max_score"],
+            "ratio": f"{best_ratio:.0%}",
+            "reason": f"점수 비율 {best_ratio:.0%}로 경쟁력 있음",
+        })
+        for s in lottery:
+            rank.append({
+                "rank": 2,
+                "type": s["type"],
+                "score": None,
+                "max_score": None,
+                "ratio": None,
+                "reason": "추첨제 동등 기회로 병행 고려",
+            })
+    else:
+        # 추첨제 1순위
+        for i, s in enumerate(lottery, 1):
+            rank.append({
+                "rank": i,
+                "type": s["type"],
+                "score": None,
+                "max_score": None,
+                "ratio": None,
+                "reason": f"점수제 경쟁력({best_ratio:.0%}) 부족, 추첨제 우선 추천",
+            })
+        if scored:
+            best = max(scored, key=lambda s: s["score"] / s["max_score"])
+            rank.append({
+                "rank": len(lottery) + 1,
+                "type": best["type"],
+                "score": best["score"],
+                "max_score": best["max_score"],
+                "ratio": f"{best_ratio:.0%}",
+                "reason": "보조 전략으로 점수제 병행 가능",
+            })
+
+    # 일반공급 항상 마지막에 추가
+    if general_max_score > 0:
+        general_ratio = general_supply_score / general_max_score
+        rank.append({
+            "rank": len(rank) + 1,
+            "type": "일반공급",
+            "score": general_supply_score,
+            "max_score": general_max_score,
+            "ratio": f"{general_ratio:.0%}",
+            "reason": f"가점 {general_supply_score}/{general_max_score}점 ({general_ratio:.0%})",
+        })
+
+    return rank
 
 
 def _as_int(value: Any, *, default: int) -> int:
