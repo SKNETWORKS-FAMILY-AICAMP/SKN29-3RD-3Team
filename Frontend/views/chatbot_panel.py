@@ -12,7 +12,7 @@ from services.mock_api import MockDiagnosisClient
 
 DEFAULT_QUESTIONS = [
     "청약통장은 꼭 있어야 하나요?",
-    "무주택 기준이 뭔가요?",
+    "무주택 기준은 뭔가요?",
     "특별공급과 일반공급 차이는 무엇인가요?",
 ]
 
@@ -22,7 +22,7 @@ def render_chatbot_page() -> None:
         """
         <div class="cy-hero-text">
           <h1>FAQ 챗봇</h1>
-          <p>자가진단 중 헷갈리는 조건을 질문해보세요. '더 알아보기'에서 넘어온 질문도 이곳에서 이어집니다.</p>
+          <p>자가진단 중 헷갈리는 조건을 질문해보세요. 진단 화면의 더 자세히 물어보기 질문도 이곳에서 이어집니다.</p>
         </div>
         <div class="cy-hero-divider"></div>
         """,
@@ -67,7 +67,11 @@ def _render_suggested_questions(messages: list[dict[str, str]]) -> None:
     question_columns = st.columns(min(3, len(questions)))
     for index, question in enumerate(questions[:3]):
         with question_columns[index % len(question_columns)]:
-            if st.button(question, key=f"chat_suggested_question_{index}_{len(messages)}", use_container_width=True):
+            if st.button(
+                question,
+                key=f"chat_suggested_question_{index}_{len(messages)}",
+                use_container_width=True,
+            ):
                 _ask(question)
                 st.rerun()
 
@@ -79,11 +83,11 @@ def _render_input_form() -> None:
             custom_question = st.text_input(
                 "직접 질문",
                 key="chat_question_input",
-                placeholder="무엇이든 물어보세요",
+                placeholder="무엇이든 물어보세요.",
                 label_visibility="collapsed",
             )
         with send_col:
-            submitted = st.form_submit_button("↑", use_container_width=True)
+            submitted = st.form_submit_button("전송", use_container_width=True)
         if submitted:
             _ask(custom_question)
             st.rerun()

@@ -17,7 +17,7 @@ HOME_PAGE = "streamlit_app.py"
 
 
 def set_page_style() -> None:
-    st.set_page_config(page_title="청약 자가진단", page_icon="청", layout="wide")
+    st.set_page_config(page_title="청약 자가진단", page_icon="🏠", layout="wide")
     st.markdown(
         """
         <style>
@@ -79,7 +79,7 @@ def set_page_style() -> None:
         }
         .cy-feature {
             border: 1px solid var(--cy-line);
-            border-radius: 10px;
+            border-radius: 8px;
             padding: 1rem;
             background: #ffffff;
             box-shadow: 0 8px 22px rgba(24, 40, 72, .05);
@@ -96,7 +96,7 @@ def set_page_style() -> None:
         }
         .cy-guide {
             border: 1px solid var(--cy-line);
-            border-radius: 10px;
+            border-radius: 8px;
             padding: .95rem 1.05rem;
             background: #ffffff;
             margin-bottom: .8rem;
@@ -140,39 +140,9 @@ def set_page_style() -> None:
         }
         div[data-testid="stVerticalBlockBorderWrapper"] {
             border-color: var(--cy-line);
-            border-radius: 10px;
+            border-radius: 8px;
             box-shadow: 0 8px 22px rgba(24, 40, 72, .05);
             background: #ffffff;
-        }
-        .cy-chat-kicker {
-            color: var(--cy-muted);
-            font-size: .94rem;
-            line-height: 1.5;
-            margin-bottom: .75rem;
-        }
-        .cy-chat-empty {
-            color: #98a2b3;
-            padding: .75rem;
-        }
-        div[data-testid="stForm"] {
-            border: 0;
-            padding: 0;
-            background: transparent;
-        }
-        div[data-testid="stForm"] div.stButton > button {
-            min-height: 2.8rem;
-            border-radius: 999px;
-            font-size: 1.1rem;
-            font-weight: 800;
-            padding: 0;
-        }
-        .cy-linked-question {
-            border: 1px solid #b8cdf8;
-            background: var(--cy-blue-soft);
-            color: #1d3f7a;
-            border-radius: 8px;
-            padding: .75rem .85rem;
-            margin-bottom: .9rem;
         }
         div.stButton > button {
             min-height: 2.65rem;
@@ -210,7 +180,7 @@ def render_app_header() -> None:
             """
             <div class="cy-hero-text">
             <h1>청약 자가진단</h1>
-            <p>내 조건을 입력하면 가능한 공급 유형과 특별공급 가능성을 확인할 수 있어요.</p>
+            <p>내 조건을 입력하면 가능한 공급 유형과 추가 확인이 필요한 항목을 한 화면에서 확인할 수 있어요.</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -219,11 +189,11 @@ def render_app_header() -> None:
         settings = load_settings()
         if hasattr(st, "popover"):
             with st.popover("Beta", use_container_width=True):
-                st.caption("현재는 로컬 FastAPI와 연결해 검증 중인 베타 화면입니다.")
+                st.caption("현재는 로컬 FastAPI와 연결을 검증 중인 베타 화면입니다.")
                 st.caption(f"API: {settings.api_mode} / {settings.api_base_url}")
         else:
             with st.expander("Beta", expanded=False):
-                st.caption("현재는 로컬 FastAPI와 연결해 검증 중인 베타 화면입니다.")
+                st.caption("현재는 로컬 FastAPI와 연결을 검증 중인 베타 화면입니다.")
                 st.caption(f"API: {settings.api_mode} / {settings.api_base_url}")
     st.markdown('<div class="cy-hero-divider"></div>', unsafe_allow_html=True)
 
@@ -234,8 +204,8 @@ def render_home_screen() -> None:
         <section class="cy-home">
           <h2>청약 조건을 먼저 정리해 보세요</h2>
           <p>
-            통장, 무주택, 세대, 혼인, 자녀 조건을 단계별로 입력하면
-            지원 가능성이 있는 공급 유형과 추가 확인 항목을 한 화면에서 볼 수 있습니다.
+            통장, 무주택, 세대, 혼인, 자녀, 소득과 자산 조건을 단계별로 입력하면
+            지원 가능성이 있는 공급 유형과 공고 기준 추가 확인 항목을 볼 수 있습니다.
           </p>
           <div class="cy-feature-row">
             <div class="cy-feature">
@@ -244,11 +214,11 @@ def render_home_screen() -> None:
             </div>
             <div class="cy-feature">
               <strong>공고 정보</strong>
-              <span>공고문 기준 상세 시뮬레이션 단계까지 이어서 입력할 수 있습니다.</span>
+              <span>공고문 줄글을 입력하면 백엔드 Node4가 구조화해 상세 시뮬레이션으로 이어갑니다.</span>
             </div>
             <div class="cy-feature">
-              <strong>챗봇</strong>
-              <span>각 조건이 왜 필요한지 진단 중 바로 질문할 수 있습니다.</span>
+              <strong>FAQ 챗봇</strong>
+              <span>진단 중 궁금한 청약 기준을 바로 질문할 수 있습니다.</span>
             </div>
           </div>
         </section>
@@ -265,7 +235,7 @@ def render_sidebar(active_page: str) -> None:
         st.caption("모드 전환")
         _sidebar_page_link(HOME_PAGE, "처음 화면", active=active_page == "home")
         _sidebar_page_link(DIAGNOSIS_PAGE, "자가진단", active=active_page == "diagnosis")
-        _sidebar_page_link(CHATBOT_PAGE, "챗봇", active=active_page == "chatbot")
+        _sidebar_page_link(CHATBOT_PAGE, "FAQ 챗봇", active=active_page == "chatbot")
         st.divider()
         render_api_connection_status()
 
@@ -357,7 +327,7 @@ def render_explanation(
             st.markdown(f"- {item}")
         if learn_more_question:
             button_key = learn_more_key or f"learn_more_{abs(hash(learn_more_question))}"
-            if st.button("더 자세히 알아보기", key=button_key, use_container_width=True):
+            if st.button("더 자세히 물어보기", key=button_key, use_container_width=True):
                 open_chatbot_with_question(learn_more_question)
 
 
@@ -389,7 +359,7 @@ def render_result(response: dict) -> None:
                     score = item.get("score")
                     max_score = item.get("max_score")
                     if score is None or max_score is None:
-                        st.caption("추첨 또는 별도 기준")
+                        st.caption("추정 또는 별도 기준")
                     else:
                         ratio = item.get("ratio")
                         st.caption(f"{score}/{max_score}점" + (f" ({ratio})" if ratio else ""))
@@ -406,17 +376,17 @@ def render_result(response: dict) -> None:
     if response.get("guide_message"):
         st.info(response["guide_message"])
 
-    blocked_reasons = response.get("blocked_reasons", [])
-    if blocked_reasons:
-        st.markdown("#### 제한 사유")
-        for reason in blocked_reasons:
-            st.markdown(f"- {reason}")
-
-    missing_inputs = response.get("missing_inputs", [])
-    if missing_inputs:
-        st.markdown("#### 부족한 입력값")
-        for missing in missing_inputs:
-            st.markdown(f"- {missing}")
+    for title, key in [
+        ("제한 사유", "blocked_reasons"),
+        ("부족한 입력값", "missing_inputs"),
+        ("공고/증빙 확인 항목", "pending_external_checks"),
+        ("다음 확인 항목", "next_actions"),
+    ]:
+        values = response.get(key, [])
+        if values:
+            st.markdown(f"#### {title}")
+            for value in values:
+                st.markdown(f"- {value}")
 
     for item in response.get("candidate_supply_types", []):
         with st.container(border=True):
@@ -433,16 +403,6 @@ def render_result(response: dict) -> None:
             if item.get("source_refs"):
                 st.caption("출처: " + ", ".join(item["source_refs"]))
 
-    pending_external_checks = response.get("pending_external_checks", [])
-    if pending_external_checks:
-        st.markdown("#### 공고/증빙 확인 항목")
-        for check in pending_external_checks:
-            st.markdown(f"- {check}")
-
     collected_detail_fields = response.get("collected_detail_fields", [])
     if collected_detail_fields:
         st.caption("초기 상세 입력 반영: " + ", ".join(collected_detail_fields))
-    if response.get("next_actions"):
-        st.markdown("#### 다음 확인 항목")
-        for action in response["next_actions"]:
-            st.markdown(f"- {action}")

@@ -22,6 +22,12 @@ class DiagnosisClient(Protocol):
     def detail(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Return detail diagnosis response."""
 
+    def simulate(self, session_id: str, simulate: bool) -> dict[str, Any]:
+        """Resume the backend graph after the profile diagnosis."""
+
+    def announcement(self, session_id: str, announcement_text: str) -> dict[str, Any]:
+        """Send free-form announcement text to the backend graph."""
+
     def chat(self, question: str, session_id: str | None = None) -> dict[str, Any]:
         """Return chat response."""
 
@@ -36,6 +42,19 @@ class FastApiDiagnosisClient:
 
     def detail(self, payload: dict[str, Any]) -> dict[str, Any]:
         return _normalize_profile_response(self._post("/api/profile", payload))
+
+    def simulate(self, session_id: str, simulate: bool) -> dict[str, Any]:
+        return _normalize_resume_response(
+            self._post("/api/simulate", {"session_id": session_id, "simulate": simulate})
+        )
+
+    def announcement(self, session_id: str, announcement_text: str) -> dict[str, Any]:
+        return _normalize_resume_response(
+            self._post(
+                "/api/announcement",
+                {"session_id": session_id, "announcement_text": announcement_text},
+            )
+        )
 
     def chat(self, question: str, session_id: str | None = None) -> dict[str, Any]:
         payload: dict[str, Any] = {"question": question}
@@ -133,7 +152,7 @@ def check_api_connection() -> dict[str, Any]:
 
 
 def _normalize_profile_response(response: dict[str, Any]) -> dict[str, Any]:
-    """Adapt clean-branch /api/profile echo responses to the existing result UI."""
+    """Adapt clean-branch /api/profile responses to the existing result UI."""
     if "candidate_supply_types" in response or response.get("result_mode"):
         return response
 
@@ -184,6 +203,41 @@ def _normalize_profile_response(response: dict[str, Any]) -> dict[str, Any]:
             "node5": response.get("node5"),
             "node6": node6,
             "backend_status": response.get("status"),
+            "session_id": response.get("session_id"),
+        }
+
+    if "supply_rank" in response or "recommended_supply" in response:
+        supply_rank = response.get("supply_rank") or []
+        return {
+            "result_mode": "PROFILE_INTERRUPTED",
+            "result_status": "공고 시뮬레이션 선택 대기",
+            "candidate_supply_types": [
+                {
+                    "supply_type": item.get("type") if isinstance(item, dict) else str(item),
+                    "status": "추천"
+                    if (
+                        isinstance(item, dict)
+                        and item.get("type") == response.get("recommended_supply")
+                    )
+                    else "검토 가능",
+                    "reasons": [str(item.get("reason") or "")] if isinstance(item, dict) else [],
+                    "missing_checks": [],
+                    "next_questions": [],
+                    "source_refs": [],
+                }
+                for item in supply_rank
+            ],
+            "blocked_reasons": [],
+            "missing_inputs": [],
+            "next_questions": [],
+            "next_actions": ["공고문 입력 여부에 따라 다음 단계를 진행합니다."],
+            "guide_message": "프로필 기반 1차 진단이 완료되었습니다.",
+            "warnings": [],
+            "profile": response.get("profile", {}),
+            "recommended_supply": response.get("recommended_supply"),
+            "supply_rank": supply_rank,
+            "session_id": response.get("session_id"),
+            "backend_status": response.get("status"),
         }
 
     profile = response.get("profile", {})
@@ -194,11 +248,8 @@ def _normalize_profile_response(response: dict[str, Any]) -> dict[str, Any]:
         "blocked_reasons": [],
         "missing_inputs": [],
         "next_questions": [],
-        "next_actions": [
-            "백엔드가 profile 입력을 정상 수신했습니다.",
-            "profile 엔진 노드 연결 후 청약 유형별 진단 결과가 이 영역에 표시됩니다.",
-        ],
-        "guide_message": "현재 clean-branch의 /api/profile은 엔진 연결 전 수신 확인 응답입니다.",
+        "next_actions": ["백엔드가 profile 입력을 정상 수신했습니다."],
+        "guide_message": "프로필 응답을 수신했습니다.",
         "warnings": [],
         "profile": profile,
         "node1": response.get("node1"),
@@ -208,6 +259,28 @@ def _normalize_profile_response(response: dict[str, Any]) -> dict[str, Any]:
         "node5": response.get("node5"),
         "node6": response.get("node6"),
         "backend_status": response.get("status"),
+        "session_id": response.get("session_id"),
+    }
+
+
+def _normalize_resume_response(response: dict[str, Any]) -> dict[str, Any]:
+    """Adapt /api/simulate and /api/announcement responses to the result UI."""
+    report = response.get("report") if isinstance(response.get("report"), dict) else {}
+    summary = report.get("summary") or response.get("message") or "백엔드 그래프 응답을 받았습니다."
+    next_steps = report.get("next_steps") or []
+    return {
+        "result_mode": "ANNOUNCEMENT_FLOW",
+        "result_status": response.get("status", "success"),
+        "candidate_supply_types": [],
+        "blocked_reasons": [],
+        "missing_inputs": [],
+        "next_questions": [],
+        "next_actions": next_steps,
+        "guide_message": summary,
+        "warnings": [],
+        "report": report,
+        "session_id": response.get("session_id"),
+        "backend_status": response.get("status"),
     }
 
 
@@ -215,7 +288,7 @@ def _score_text(item: dict[str, Any]) -> str:
     score = item.get("score")
     max_score = item.get("max_score")
     if score is None or max_score is None:
-        return "점수: 추첨/별도 기준"
+        return "점수: 추정/별도 기준"
     return f"점수: {score}/{max_score}"
 
 

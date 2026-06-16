@@ -1,5 +1,8 @@
 chromadb
 streamlit
+fastapi
+uvicorn
+pydantic
 python-dotenv
 openai
 langchain-core

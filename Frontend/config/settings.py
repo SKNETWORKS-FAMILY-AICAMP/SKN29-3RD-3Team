@@ -30,7 +30,7 @@ def _float_env(name: str, default: float) -> float:
 
 @lru_cache(maxsize=1)
 def load_settings() -> FrontendSettings:
-    api_mode = os.getenv("CHEONGYAK_API_MODE", "auto").strip().lower()
+    api_mode = os.getenv("CHEONGYAK_API_MODE", "http").strip().lower() # 기본모드를 http로 지정
     if api_mode not in {"auto", "mock", "http"}:
         api_mode = "auto"
 

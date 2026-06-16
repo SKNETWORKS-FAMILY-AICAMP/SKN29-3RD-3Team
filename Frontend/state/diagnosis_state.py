@@ -12,22 +12,31 @@ STEPS = [
     ("account", "통장"),
     ("housing", "주택/세대"),
     ("family", "혼인/자녀"),
-    ("optional", "선택 정보"),
+    ("optional", "소득/자산"),
     ("announcement", "공고 정보"),
     ("result", "결과"),
 ]
 
 
 def build_form_from_state() -> DiagnosisForm:
-    include_income = bool(st.session_state.get("include_average_monthly_income"))
-    include_property_history = bool(st.session_state.get("include_property_history"))
-    include_assets = bool(st.session_state.get("include_total_assets"))
     child_status = st.session_state.get("child_status")
+    minor_child_count = (
+        0
+        if child_status == "NO_CHILD"
+        else int(st.session_state.get("minor_child_count", 1))
+        if child_status == "HAS_CHILD"
+        else None
+    )
     minor_children_status = (
         "UNDER_TWO"
         if child_status == "NO_CHILD"
+        else "TWO_OR_MORE"
+        if minor_child_count is not None and minor_child_count >= 2
+        else "UNDER_TWO"
+        if minor_child_count is not None
         else st.session_state.get("minor_children_status")
     )
+    dual_income_map = {"맞벌이": True, "외벌이": False}
 
     return DiagnosisForm(
         bankbook_type=st.session_state.get("bankbook_type"),
@@ -35,25 +44,27 @@ def build_form_from_state() -> DiagnosisForm:
         bankbook_payments=int(st.session_state.get("bankbook_payments", 0)),
         bankbook_balance=int(st.session_state.get("bankbook_balance", 0)),
         region=st.session_state.get("region"),
+        residence_period_years=int(st.session_state.get("residence_period_years", 0)),
         is_homeless=st.session_state.get("is_homeless"),
         homeless_period_years=st.session_state.get("homeless_period_years")
         if st.session_state.get("is_homeless") is True
         else None,
         is_household_head=st.session_state.get("is_household_head"),
-        num_household_members=st.session_state.get("num_household_members")
-        if st.session_state.get("is_household_head") is True
-        else None,
+        num_household_members=max(int(st.session_state.get("num_household_members", 1)), 1),
         birth_year=int(st.session_state.get("birth_year", 1990)),
         marital_status=st.session_state.get("marital_status"),
+        marriage_period_years=(
+            int(st.session_state.get("marriage_period_years", 0))
+            if st.session_state.get("marital_status") in {"MARRIED", "ENGAGED"}
+            else None
+        ),
         child_status=child_status,
         minor_children_status=minor_children_status,
-        average_monthly_income=int(st.session_state.get("average_monthly_income", 0))
-        if include_income
-        else None,
-        has_property_history=st.session_state.get("has_property_history")
-        if include_property_history
-        else None,
-        total_assets=int(st.session_state.get("total_assets", 0)) if include_assets else None,
+        minor_child_count=minor_child_count,
+        is_dual_income=dual_income_map.get(st.session_state.get("dual_income_status")),
+        average_monthly_income=int(st.session_state.get("average_monthly_income", 0)),
+        has_property_history=st.session_state.get("has_property_history"),
+        total_assets=int(st.session_state.get("total_assets", 0)),
     )
 
 
@@ -83,22 +94,9 @@ def build_detail_payload() -> dict[str, str | None]:
     }
 
 
-def build_announcement_payload() -> dict | None:
-    if not st.session_state.get("include_announcement"):
-        return None
-    return {
-        "region": st.session_state.get("announcement_region") or "",
-        "is_regulated": bool(st.session_state.get("announcement_is_regulated")),
-        "supply_type": st.session_state.get("announcement_supply_type") or "UNKNOWN",
-        "price": int(st.session_state.get("announcement_price", 0)),
-        "deposit": (
-            int(st.session_state.get("announcement_deposit", 0))
-            if int(st.session_state.get("announcement_deposit", 0)) > 0
-            else None
-        ),
-        "area": st.session_state.get("announcement_area") or "",
-        "supply_count": int(st.session_state.get("announcement_supply_count", 0)),
-    }
+def build_announcement_payload() -> str | None:
+    announcement_text = str(st.session_state.get("announcement_text") or "").strip()
+    return announcement_text or None
 
 
 def collect_response_questions(response: dict) -> list[str]:

@@ -13,7 +13,6 @@ from domain.constants import (
     DETAIL_FIELD_OPTIONS,
     HOMELESS_PERIOD_OPTIONS,
     MARITAL_STATUS_OPTIONS,
-    MINOR_CHILDREN_OPTIONS,
     PROPERTY_HISTORY_OPTIONS,
     REGION_OPTIONS,
     YES_NO_OPTIONS,
@@ -63,7 +62,7 @@ def render_account_step() -> None:
     render_explanation(
         "왜 필요한가요?",
         [
-            "통장 종류는 지원 가능한 주택 유형과 기본 자격을 나누는 첫 조건입니다.",
+            "통장 종류와 가입일은 신청 가능한 주택 유형과 기본 자격을 나누는 첫 조건입니다.",
             "가입일은 가입 기간과 1순위 요건 확인에 사용합니다.",
             "납입 횟수와 예치금은 지역과 공급 유형별 충족 여부를 판단하는 핵심 값입니다.",
         ],
@@ -115,10 +114,10 @@ def render_housing_step() -> None:
         "왜 필요한가요?",
         [
             "거주 지역은 예치금 기준과 해당 지역 공고 조건 비교에 필요합니다.",
-            "무주택 여부와 기간은 특별공급 및 일반공급 가점 판단의 중요한 기준입니다.",
-            "세대주 여부와 세대원 수는 공고별 신청 자격과 세대 기준 확인에 사용합니다.",
+            "무주택 여부와 기간은 특별공급 및 일반공급 가점 판단에 중요합니다.",
+            "세대 구성원 수는 소득 기준과 부양가족 관련 계산에 사용합니다.",
         ],
-        learn_more_question="무주택 기준, 무주택 기간, 세대주 여부는 청약 자격에 어떻게 반영되나요?",
+        learn_more_question="무주택 기준, 무주택 기간, 세대 정보는 청약 자격에 어떻게 반영되나요?",
         learn_more_key="learn_more_housing",
     )
     st.selectbox(
@@ -130,20 +129,30 @@ def render_housing_step() -> None:
         on_change=persist_widget,
         args=("region",),
     )
+    st.number_input(
+        "해당 지역 거주기간(년)",
+        min_value=0,
+        step=1,
+        key=widget_key("residence_period_years", 0),
+        on_change=persist_widget,
+        args=("residence_period_years",),
+    )
     is_homeless = card_choice("무주택 여부", "is_homeless", YES_NO_OPTIONS, columns=2)
     if is_homeless is True:
         card_choice("무주택 기간", "homeless_period_years", HOMELESS_PERIOD_OPTIONS, columns=4)
+    else:
+        st.caption("무주택이 아니면 무주택 기간은 0년으로 전달됩니다.")
 
-    is_household_head = card_choice("세대주 여부", "is_household_head", YES_NO_OPTIONS, columns=2)
-    if is_household_head is True:
-        st.number_input(
-            "세대원 수",
-            min_value=1,
-            step=1,
-            key=widget_key("num_household_members", 1),
-            on_change=persist_widget,
-            args=("num_household_members",),
-        )
+    card_choice("세대주 여부", "is_household_head", YES_NO_OPTIONS, columns=2)
+    st.number_input(
+        "세대 구성원 수",
+        min_value=1,
+        step=1,
+        key=widget_key("num_household_members", 1),
+        on_change=persist_widget,
+        args=("num_household_members",),
+    )
+    st.caption("본인을 포함한 인원입니다. 세대주가 아니어도 최소 1명으로 입력해야 합니다.")
 
 
 def render_family_step() -> None:
@@ -151,9 +160,9 @@ def render_family_step() -> None:
     render_explanation(
         "왜 필요한가요?",
         [
-            "혼인 상태는 신혼부부 특별공급 후보 판단에 직접 사용합니다.",
-            "출생 연도는 청년, 생애최초, 노부모 등 연령 조건과 연결될 수 있습니다.",
-            "자녀 여부는 미성년 자녀 수와 신생아 특별공급 후보 판단에 사용합니다.",
+            "혼인 상태와 혼인기간은 신혼부부 특별공급 후보 판단에 사용합니다.",
+            "출생 연도는 청년, 생애최초, 노부모 관련 조건과 연결됩니다.",
+            "미성년 자녀 수와 가장 어린 자녀 연령은 다자녀/신생아 특별공급 판단에 사용합니다.",
         ],
         learn_more_question="혼인 상태, 출생 연도, 자녀 정보는 특별공급 가능성 판단에 어떻게 쓰이나요?",
         learn_more_key="learn_more_family",
@@ -165,10 +174,17 @@ def render_family_step() -> None:
         columns=3,
     )
     if marital_status in {"MARRIED", "ENGAGED"}:
-        st.caption("혼인 기간은 신혼부부 특별공급 후보를 좁히는 데 사용합니다. 모르면 '모름'을 선택해도 됩니다.")
-        render_detail_card_choice("marriage_period", columns=3)
+        st.number_input(
+            "혼인기간(년)",
+            min_value=0,
+            step=1,
+            key=widget_key("marriage_period_years", 0),
+            on_change=persist_widget,
+            args=("marriage_period_years",),
+        )
     else:
         clear_detail_values("marriage_period")
+        st.caption("미혼이면 혼인기간은 입력하지 않고 전달하지 않습니다.")
 
     st.number_input(
         "출생 연도",
@@ -181,150 +197,95 @@ def render_family_step() -> None:
     )
     child_status = card_choice("자녀 여부", "child_status", CHILD_STATUS_OPTIONS, columns=2)
     if child_status == "HAS_CHILD":
-        card_choice(
-            "만 19세 미만 자녀 수",
-            "minor_children_status",
-            MINOR_CHILDREN_OPTIONS,
-            columns=2,
+        st.number_input(
+            "미성년 자녀 수",
+            min_value=0,
+            step=1,
+            key=widget_key("minor_child_count", 1),
+            on_change=persist_widget,
+            args=("minor_child_count",),
         )
-        st.caption("가장 어린 자녀 연령은 신생아 특별공급 후보가 있을 때 상세 판단에 사용합니다.")
+        st.caption("2명 이상이면 다자녀 특별공급 후보 판단에 직접 반영됩니다.")
         render_detail_card_choice("youngest_child_age_group", columns=4)
     elif child_status == "NO_CHILD":
         clear_detail_values("youngest_child_age_group", "child_count_group")
-        st.caption("자녀가 없으면 미성년 자녀 수는 자동으로 2명 미만으로 전달됩니다.")
+        st.caption("자녀가 없으면 미성년 자녀 수는 0명으로 전달됩니다.")
 
 
 def render_optional_step() -> None:
-    st.subheader("4. 선택 정보")
+    st.subheader("4. 소득/자산/이력 정보")
     render_explanation(
-        "선택 정보인가요?",
+        "왜 필요한가요?",
         [
-            "소득과 자산은 특별공급 소득/자산 기준 비교에 필요할 수 있습니다.",
-            "주택 구입 이력은 생애최초 등 일부 제도 판단에 영향을 줄 수 있습니다.",
-            "지금 모르면 비워두고 진행해도 되며, 결과에서 추가 확인 항목으로 남깁니다.",
+            "소득과 맞벌이 여부는 신혼부부/생애최초 특별공급의 소득 기준 판단에 사용합니다.",
+            "총자산은 자산 기준과 공고 기반 자금 리스크를 계산하는 데 필요합니다.",
+            "주택 구입/소유 이력은 생애최초 특별공급 후보 판단에 직접 반영됩니다.",
         ],
         learn_more_question="소득, 자산, 주택 구입 이력은 특별공급과 생애최초 판단에 어떻게 영향을 주나요?",
         learn_more_key="learn_more_optional",
     )
-
-    include_income = st.checkbox(
-        "월평균 소득 입력하기",
-        key=widget_key("include_average_monthly_income", False),
+    st.number_input(
+        "월평균 소득",
+        min_value=0,
+        step=100000,
+        key=widget_key("average_monthly_income", 0),
         on_change=persist_widget,
-        args=("include_average_monthly_income",),
+        args=("average_monthly_income",),
     )
-    if include_income:
-        st.number_input(
-            "월평균 소득",
-            min_value=0,
-            step=100000,
-            key=widget_key("average_monthly_income", 0),
-            on_change=persist_widget,
-            args=("average_monthly_income",),
-        )
+    st.caption("가구 전체 기준 월평균 소득입니다. 모르는 경우 0으로 두면 결과 정확도가 낮아질 수 있습니다.")
 
-    include_property_history = st.checkbox(
-        "주택 구입 이력 입력하기",
-        key=widget_key("include_property_history", False),
+    st.selectbox(
+        "맞벌이 여부",
+        ["맞벌이", "외벌이"],
+        index=None,
+        placeholder="맞벌이 여부를 선택하세요",
+        key=widget_key("dual_income_status"),
         on_change=persist_widget,
-        args=("include_property_history",),
+        args=("dual_income_status",),
     )
-    if include_property_history:
-        card_choice(
-            "주택 구입 이력",
-            "has_property_history",
-            PROPERTY_HISTORY_OPTIONS,
-            columns=2,
-        )
+    if st.session_state.get("dual_income_status") is None:
+        st.error("맞벌이 여부는 소득 기준 판단에 필요합니다.")
 
-    include_assets = st.checkbox(
-        "자산 입력하기",
-        key=widget_key("include_total_assets", False),
+    card_choice(
+        "주택 구입/소유 이력",
+        "has_property_history",
+        PROPERTY_HISTORY_OPTIONS,
+        columns=2,
+    )
+    if st.session_state.get("has_property_history") is None:
+        st.error("생애최초 판단을 위해 주택 구입/소유 이력을 선택하세요.")
+
+    st.number_input(
+        "총자산",
+        min_value=0,
+        step=1000000,
+        key=widget_key("total_assets", 0),
         on_change=persist_widget,
-        args=("include_total_assets",),
+        args=("total_assets",),
     )
-    if include_assets:
-        st.number_input(
-            "총자산",
-            min_value=0,
-            step=1000000,
-            key=widget_key("total_assets", 0),
-            on_change=persist_widget,
-            args=("total_assets",),
-        )
+    st.caption("보유 예금, 투자금, 부동산 등 신청자가 판단 가능한 총자산 기준으로 입력하세요.")
 
-    st.caption("노부모 부양 여부는 선택 항목입니다. 정확히 모르면 '모름'을 선택하세요.")
+    st.caption("노부모 부양 여부도 후보 판단에 사용합니다. 정확히 모르면 '모름'을 선택하세요.")
     render_detail_card_choice("elderly_support", columns=3)
 
 
 def render_announcement_step() -> None:
     st.subheader("5. 공고 정보")
-    st.caption("공고문 정보가 있으면 입력하고, 없으면 현재 입력값만으로 최종 리포트를 생성합니다.")
+    st.caption("공고 정보를 입력하면 상세 시뮬레이션을 진행하고, 비워두면 현재 입력값만으로 최종 리포트를 생성합니다.")
 
-    include_announcement = st.checkbox(
-        "공고문 기준으로 상세 시뮬레이션하기",
-        key=widget_key("include_announcement", False),
+    st.markdown("**입력 예시**")
+    st.caption("예: 의왕시, 비규제지역, 민간, 59타입, 분양가 6억, 공급 120세대")
+    st.caption("예: 서울 강남구 투기과열지구에 있는 민간분양 전용 84㎡ 공고이고 분양가는 15억, 공급은 300세대입니다.")
+    st.text_area(
+        "공고 정보를 입력해 주세요",
+        placeholder="예: 서울 강남구 투기과열지구에 있는 민간분양 전용 84㎡ 공고이고 분양가는 15억, 공급은 300세대입니다.",
+        height=120,
+        key=widget_key("announcement_text", ""),
         on_change=persist_widget,
-        args=("include_announcement",),
+        args=("announcement_text",),
     )
-    if not include_announcement:
-        st.info("공고문 없이도 Node4 이후 전략/리포트 단계로 진행합니다. 상세 공고 기반 금액 분석은 생략됩니다.")
-        return
-
-    form = build_form_from_state()
-    col_1, col_2 = st.columns(2)
-    with col_1:
-        st.text_input(
-            "공고 지역",
-            key=widget_key("announcement_region", form.region or ""),
-            on_change=persist_widget,
-            args=("announcement_region",),
-        )
-        st.selectbox(
-            "공급 유형",
-            ["PRIVATE", "PUBLIC", "UNKNOWN"],
-            key=widget_key("announcement_supply_type", "PRIVATE"),
-            on_change=persist_widget,
-            args=("announcement_supply_type",),
-        )
-        st.text_input(
-            "평형/면적",
-            key=widget_key("announcement_area", "84"),
-            on_change=persist_widget,
-            args=("announcement_area",),
-        )
-    with col_2:
-        st.checkbox(
-            "규제지역",
-            key=widget_key("announcement_is_regulated", True),
-            on_change=persist_widget,
-            args=("announcement_is_regulated",),
-        )
-        st.number_input(
-            "분양가",
-            min_value=0,
-            step=10000000,
-            key=widget_key("announcement_price", 500000000),
-            on_change=persist_widget,
-            args=("announcement_price",),
-        )
-        st.number_input(
-            "공급 세대 수",
-            min_value=0,
-            step=1,
-            key=widget_key("announcement_supply_count", 80),
-            on_change=persist_widget,
-            args=("announcement_supply_count",),
-        )
-
-    st.number_input(
-        "계약금/보증금",
-        min_value=0,
-        step=1000000,
-        key=widget_key("announcement_deposit", 0),
-        on_change=persist_widget,
-        args=("announcement_deposit",),
-    )
+    if not str(st.session_state.get("announcement_text") or "").strip():
+        st.info("공고 정보를 비워두면 상세 공고 분석 없이 기본 리포트로 진행합니다.")
 
 
 def render_navigation(step_index: int) -> None:
@@ -343,7 +304,7 @@ def render_navigation(step_index: int) -> None:
         errors = validate_step(step_key, form, build_detail_payload())
         if errors:
             for error in errors:
-                st.caption(error)
+                st.error(error)
         if st.button("다음", disabled=bool(errors), type="primary", use_container_width=True):
             if step_key == "announcement":
                 run_diagnosis(form)

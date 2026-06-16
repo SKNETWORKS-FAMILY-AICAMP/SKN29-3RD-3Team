@@ -31,7 +31,8 @@ def render_self_diagnosis_guide() -> None:
         """
         <div class="cy-guide">
           <strong>자가진단 가이드</strong>
-          필수 조건만 입력해도 진단을 진행할 수 있습니다. 모르는 항목은 비워두고 다음 단계로 넘어갈 수 있어요.
+          필수 조건을 순서대로 입력하면 진단을 진행할 수 있습니다.
+          공고 정보는 비워두면 기본 리포트로, 입력하면 공고 기준 상세 리포트로 이어집니다.
         </div>
         """,
         unsafe_allow_html=True,

@@ -32,6 +32,13 @@ load_dotenv()
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 
+def _format_percent(value) -> str:
+    """Return a percent label for numeric ratios without failing on unknown values."""
+    if isinstance(value, (int, float)):
+        return f"{value:.0%}"
+    return "계산 불가"
+
+
 # ── State 정의 ────────────────────────────────────────────────────
 
 class Node5State(TypedDict, total=False):
@@ -88,7 +95,10 @@ def run_node5(state: Node5State) -> Node5State:
         "real_investment": investment_result["real_investment"],
         "total_assets": total_assets,
     })
-    print(f"  자금 리스크: {risk_result['risk_level']} (비율 {risk_result['ratio']:.0%})")
+    print(
+        f"  자금 리스크: {risk_result['risk_level']} "
+        f"(비율 {_format_percent(risk_result.get('ratio'))})"
+    )
 
     # ── STEP 2: create_react_agent (나머지 툴) ────────────────────
     print("\n[Node 5] STEP 2: ReAct Agent 실행")
