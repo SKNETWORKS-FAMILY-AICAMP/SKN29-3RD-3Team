@@ -50,13 +50,37 @@ def _evaluate_score_supply(supply: dict) -> dict:
 
 
 def _evaluate_lottery_supply(supply: dict) -> dict:
-    """추첨제 특공 평가 — 조건 충족 시 동등 확률"""
+    """추첨제 특공 평가 — 자격 충족 여부를 반영"""
+    missing_items = supply.get("missing_items") or []
+    status = supply.get("status")
+
+    if status == "가능성 낮음":
+        return {
+            "type": supply["type"],
+            "method": supply["method"],
+            "ratio": None,
+            "competitiveness": "가능성 낮음",
+            "recommend_priority": 9,
+            "missing_items": missing_items,
+        }
+
+    if missing_items or status == "추가 확인 필요":
+        return {
+            "type": supply["type"],
+            "method": supply["method"],
+            "ratio": None,
+            "competitiveness": "자격 확인 필요",
+            "recommend_priority": 5,
+            "missing_items": missing_items,
+        }
+
     return {
         "type": supply["type"],
         "method": supply["method"],
         "ratio": None,
         "competitiveness": "동등 확률",
         "recommend_priority": 2,
+        "missing_items": [],
     }
 
 
@@ -92,7 +116,6 @@ def compare_supply_strategy(
     best_score_ratio = 0.0
     best_score_supply = None
 
-    # 특공별 평가
     for supply in available_supplies:
         if supply["method"] == "추첨제":
             has_lottery = True
@@ -106,7 +129,6 @@ def compare_supply_strategy(
 
         evaluations.append(eval_result)
 
-    # 일반공급 평가
     general_ratio = general_supply_score / general_max_score if general_max_score > 0 else 0
     general_eval = {
         "type": "일반공급",
@@ -129,55 +151,81 @@ def compare_supply_strategy(
     }
     evaluations.append(general_eval)
 
-    # ── 전략 판정 ─────────────────────────────────────────────────
-    if has_lottery and best_score_ratio < COMPETITIVENESS_THRESHOLD:
-        # 추첨제 우선
-        lottery_supply = next(
-            (e for e in evaluations if e["method"] == "추첨제"), None
-        )
+    eligible_lottery = [
+        e for e in evaluations
+        if e["method"] == "추첨제" and e.get("recommend_priority", 2) < 5
+    ]
+    unresolved_lottery = [
+        e for e in evaluations
+        if e["method"] == "추첨제" and e.get("recommend_priority", 2) >= 5
+    ]
+    has_eligible_lottery = bool(eligible_lottery)
+
+    if has_eligible_lottery and best_score_ratio < COMPETITIVENESS_THRESHOLD:
+        lottery_supply = min(eligible_lottery, key=lambda e: e.get("recommend_priority", 2))
         primary = {
-            "type": lottery_supply["type"] if lottery_supply else "추첨제 특공",
+            "type": lottery_supply["type"],
             "reason": (
                 f"점수제 특공 경쟁력({best_score_ratio:.0%})이 기준({COMPETITIVENESS_THRESHOLD:.0%}) "
                 f"미만으로 낮아 추첨제가 더 유리합니다."
             ),
         }
-        secondary = {
-            "type": best_score_supply["type"] if best_score_supply else recommended_supply,
-            "reason": "점수제 특공도 신청 가능하나 경쟁이 치열할 수 있습니다.",
-        }
-        strategy_summary = (
-            f"현재 점수제 특공 경쟁력이 {best_score_ratio:.0%}로 기준({COMPETITIVENESS_THRESHOLD:.0%})에 "
-            f"미치지 못합니다. 추첨제 특공({primary['type']})을 1순위로 신청하고, "
-            f"점수제 특공은 보조 전략으로 활용하는 것을 권장합니다."
-        )
-    else:
-        # 점수제 우선
+    elif best_score_supply:
         primary = {
-            "type": best_score_supply["type"] if best_score_supply else recommended_supply,
+            "type": best_score_supply["type"],
             "reason": (
                 f"점수제 특공 경쟁력({best_score_ratio:.0%})이 기준({COMPETITIVENESS_THRESHOLD:.0%}) "
                 f"이상으로 높아 점수제 특공이 유리합니다."
             ),
         }
-        secondary = None
-        if has_lottery:
-            lottery_supply = next(
-                (e for e in evaluations if e["method"] == "추첨제"), None
-            )
-            secondary = {
-                "type": lottery_supply["type"] if lottery_supply else None,
-                "reason": "추첨제 특공도 동등한 기회로 함께 고려할 수 있습니다.",
-            }
+    else:
+        excluded_notes = [
+            f"{e['type']}은 {', '.join(e['missing_items'])} 미충족으로 제외"
+            for e in unresolved_lottery
+            if e.get("missing_items")
+        ]
+        reason = f"현재 즉시 신청 가능한 유형 중 {recommended_supply}이 가장 현실적인 선택입니다."
+        if excluded_notes:
+            reason += " (" + ", ".join(excluded_notes) + ")"
+        primary = {
+            "type": recommended_supply,
+            "reason": reason,
+        }
 
-        strategy_summary = (
-            f"현재 점수제 특공 경쟁력이 {best_score_ratio:.0%}로 충분합니다. "
-            f"{primary['type']}을 1순위로 신청하는 것을 권장합니다."
-            + (
-                f" {secondary['type']}(추첨제)도 병행 신청을 고려하세요."
-                if secondary else ""
-            )
-        )
+    secondary_candidates = [
+        e for e in evaluations
+        if e["type"] != primary["type"] and e.get("recommend_priority", 2) < 9
+    ]
+    secondary_candidates.sort(
+        key=lambda e: (e.get("recommend_priority", 2), -(e.get("ratio") or 0.0))
+    )
+    secondary_eval = secondary_candidates[0] if secondary_candidates else None
+    secondary = (
+        {
+            "type": secondary_eval["type"],
+            "reason": (
+                "자격 확인이 더 필요하지만 함께 검토할 수 있습니다."
+                if secondary_eval.get("recommend_priority", 2) == 5
+                else "추첨제 특공도 동등한 기회로 함께 고려할 수 있습니다."
+                if secondary_eval["method"] == "추첨제"
+                else "보조 전략으로 함께 신청을 고려할 수 있습니다."
+            ),
+        }
+        if secondary_eval
+        else None
+    )
+
+    unresolved_notes = [
+        f"{e['type']}: {', '.join(e['missing_items'])} 확인 필요"
+        for e in evaluations
+        if e["method"] == "추첨제" and e.get("missing_items")
+    ]
+
+    strategy_summary = (
+        f"{primary['type']}을 1순위로 신청하는 것을 권장합니다. {primary['reason']}"
+        + (f" {secondary['type']}도 함께 고려하세요." if secondary else "")
+        + (" " + " / ".join(unresolved_notes) if unresolved_notes else "")
+    )
 
     return {
         "primary": primary,

@@ -98,6 +98,14 @@ def _normalize_score(raw_score: int) -> int:
     return max(0, min(100, raw_score))
 
 
+def _get_residency_priority_penalty(is_same_region: bool | None) -> tuple[int, str]:
+    """거주지역과 건설지역 일치 여부에 따른 우선공급 보정"""
+    if is_same_region is None:
+        return 0, "거주지역 우선공급 여부 확인 불가"
+    if is_same_region:
+        return 0, "해당지역 거주자로 우선공급 대상에 해당"
+    return -15, "해당지역 거주자가 아니므로 우선공급 대상에서 제외, 기타지역 자격으로 경쟁"
+
 # ── Tool 5: 평형별 당첨확률 계산 ──────────────────────────────────
 
 @tool
@@ -110,9 +118,10 @@ def calculate_winning_probability(
     region: str,
     area: str,
     recommended_supply: str,
+    is_same_region: bool | None = None,
 ) -> dict:
     """
-    6단계 점수 기반으로 특공/일반공급의 당첨확률을 계산합니다.
+    6단계 점수와 거주지역 우선공급 여부를 바탕으로 특공/일반공급의 당첨확률을 계산합니다.
 
     Args:
         supply_type: 공급 유형 (예: "신혼부부 특공", "생애최초 특공", "일반공급")
@@ -122,14 +131,16 @@ def calculate_winning_probability(
         region: 청약 대상 건설지역
         area: 희망 평형 (예: "84㎡")
         recommended_supply: Node 2 추천 공급 유형
+        is_same_region: 사용자 거주지역과 건설지역의 일치 여부 (check_regional_priority 결과)
 
     Returns:
         dict: {
             "supply_type": 공급 유형,
             "winning_score": 최종 점수 (0~100),
-            "probability": 당첨확률 ("상" | "중" | "하"),
+            "probability": 경쟁력 지표 ("상" | "중" | "하"),
             "breakdown": 단계별 점수 상세,
             "reasons": 판정 이유 목록,
+            "methodology_notice": 추정 방식과 한계에 대한 안내문,
         }
     """
     reasons = []
@@ -173,6 +184,11 @@ def calculate_winning_probability(
         rec_bonus = 0
     breakdown["추천카드"] = rec_bonus
 
+    # 7단계: 거주지역 우선공급 보정
+    residency_penalty, residency_reason = _get_residency_priority_penalty(is_same_region)
+    breakdown["거주지역우선순위"] = residency_penalty
+    reasons.append(residency_reason)
+
     # 최종 점수 계산 및 정규화
     raw_score = (
         method_score
@@ -181,6 +197,7 @@ def calculate_winning_probability(
         + region_penalty
         + area_bonus
         + rec_bonus
+        + residency_penalty
     )
     winning_score = _normalize_score(raw_score)
 
@@ -192,10 +209,17 @@ def calculate_winning_probability(
     else:
         probability = "하"
 
+    methodology_notice = (
+        "이 지표는 공급 세대수, 지역 경쟁도, 보유 점수, 추천 유형 일치 여부, 거주지역 우선공급 여부를 "
+        "기반으로 계산한 참고용 경쟁력 추정치입니다. 실제 신청자 수(경쟁률)는 반영되지 않았으며, "
+        "실제 당첨 확률은 신청자 수에 따라 이 추정과 크게 다를 수 있습니다."
+    )
+
     return {
         "supply_type": supply_type,
         "winning_score": winning_score,
         "probability": probability,
         "breakdown": breakdown,
         "reasons": reasons,
+        "methodology_notice": methodology_notice,
     }

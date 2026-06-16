@@ -11,6 +11,7 @@ import importlib.util
 from functools import lru_cache
 from pathlib import Path
 from types import ModuleType
+from datetime import date
 
 
 from langchain_core.tools import tool
@@ -181,32 +182,61 @@ def analyze_subscription_timing(
             "answer": 청약 시점 분석 답변,
             "sources": 참고 출처 목록,
             "is_ready": 1순위 자격 충족 여부 (간단 판단),
+            "joined_months": 실제 계산된 가입 기간(개월),
         }
     """
+    joined_months = _calculate_joined_months(bankbook_join_date)
+
     area_type = "투기과열지구" if is_regulated else "일반지역"
 
+    joined_months_text = (
+        f"가입 후 {joined_months}개월 경과"
+        if joined_months is not None
+        else "가입일 정보 확인 불가"
+    )
+
     query = (
-        f"{bankbook_type} 가입 후 납입 횟수 {bankbook_payments}회일 때 "
+        f"{bankbook_type} {joined_months_text}, 납입 횟수 {bankbook_payments}회일 때 "
         f"{area_type} {supply_type}주택 청약 1순위 자격이 되는지? "
         f"가입기간 및 납입 횟수 요건을 알려줘."
     )
 
     system_prompt = (
         "당신은 대한민국 주택 청약 제도 전문가입니다. "
-        "청약통장 종류와 납입 횟수, 지역 규제 여부를 고려해 "
+        "아래에 제시된 가입 기간(개월)과 납입 횟수, 지역 규제 여부는 이미 정확하게 계산된 사실입니다. "
+        "이 숫자를 임의로 다시 추정하거나 다른 값으로 바꾸지 말고, 그대로 사용해 "
         "현재 청약 신청이 가능한지, 1순위 자격을 갖췄는지 분석해주세요."
     )
 
     result = _rag_answer(query, system_prompt)
 
-    # 간단한 1순위 자격 판단 (규제지역 24개월, 비규제 6개월 기준)
-    required_payments = 24 if is_regulated else 6
-    is_ready = bankbook_payments >= required_payments
+    # 가입기간(개월) 기준 1순위 자격 판단 (규제지역 24개월, 비규제 6개월 기준)
+    required_months = 24 if is_regulated else 6
+    is_ready = (
+        joined_months is not None
+        and joined_months >= required_months
+        and bankbook_payments >= required_months
+    )
 
     return {
         **result,
         "bankbook_type": bankbook_type,
         "bankbook_payments": bankbook_payments,
-        "required_payments": required_payments,
+        "joined_months": joined_months,
+        "required_months": required_months,
         "is_ready": is_ready,
     }
+
+
+def _calculate_joined_months(join_date_str: str) -> int | None:
+    """가입일 문자열을 받아 오늘까지의 경과 개월 수를 계산합니다."""
+    try:
+        join_date = date.fromisoformat(str(join_date_str))
+    except (ValueError, TypeError):
+        return None
+
+    today = date.today()
+    months = (today.year - join_date.year) * 12 + (today.month - join_date.month)
+    if today.day < join_date.day:
+        months -= 1
+    return max(months, 0)

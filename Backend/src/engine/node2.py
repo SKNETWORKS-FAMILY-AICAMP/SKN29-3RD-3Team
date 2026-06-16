@@ -42,9 +42,13 @@ def node2_recommend_supply(state: Mapping[str, Any]) -> dict[str, Any]:
     general_result = tool_results.get(GENERAL_SUPPLY_TOOL, {})
     general_supply_score = _as_int(general_result.get("total_score"), default=0)
     general_max_score = _as_int(general_result.get("max_score"), default=84)
+    general_score_breakdown = _build_general_score_breakdown(general_result)
 
     supply_rank = _build_supply_rank(
-        available_supplies, general_supply_score, general_max_score
+        available_supplies,
+        general_supply_score,
+        general_max_score,
+        general_score_breakdown,
     )
 
     return {
@@ -59,6 +63,13 @@ def node2_recommend_supply(state: Mapping[str, Any]) -> dict[str, Any]:
         "supply_rank": supply_rank,
     }
 
+def _build_general_score_breakdown(general_result: Mapping[str, Any]) -> dict[str, int]:
+    breakdown: dict[str, int] = {}
+    for key in ("homeless_score", "dependent_family_score", "subscription_score", "spouse_subscription_score"):
+        value = general_result.get(key)
+        if isinstance(value, int) and value > 0:
+            breakdown[key] = value
+    return breakdown
 
 def _available_supply_types(state: Mapping[str, Any]) -> list[str]:
     raw_values = state.get("available_supply_types") or []
@@ -106,6 +117,11 @@ def _build_supply_analysis_item(
         "score": score,
         "max_score": max_score,
         "method": method,
+        "status": result.get("status"),
+        "score_breakdown": result.get("score_breakdown", {}),
+        "matched_items": result.get("matched_items", []),
+        "missing_items": result.get("missing_items", []),
+        "source_refs": result.get("source_refs", []),
     }
 
 
@@ -113,9 +129,8 @@ def _build_supply_rank(
     available_supplies: list[dict[str, Any]],
     general_supply_score: int,
     general_max_score: int,
+    general_score_breakdown: dict[str, int] | None = None,
 ) -> list[dict[str, Any]]:
-    rank = []
-
     scored = [
         s for s in available_supplies
         if s["method"] == "가점제"
@@ -123,68 +138,89 @@ def _build_supply_rank(
         and isinstance(s.get("max_score"), int)
         and s["max_score"] > 0
     ]
-    lottery = [s for s in available_supplies if s["method"] == "추첨제"]
+    lottery_all = [s for s in available_supplies if s["method"] == "추첨제"]
+    lottery_eligible = [s for s in lottery_all if not s.get("missing_items")]
+    lottery_unresolved = [s for s in lottery_all if s.get("missing_items")]
 
     scored_sorted = sorted(scored, key=lambda s: s["score"] / s["max_score"], reverse=True)
     best_ratio = scored_sorted[0]["score"] / scored_sorted[0]["max_score"] if scored_sorted else 0.0
 
-    if scored_sorted and best_ratio >= COMPETITIVENESS_THRESHOLD:
-        for s in scored_sorted:
-            ratio = s["score"] / s["max_score"]
-            rank.append({
-                "rank": len(rank) + 1,
-                "type": s["type"],
-                "score": s["score"],
-                "max_score": s["max_score"],
-                "ratio": f"{ratio:.0%}",
-                "reason": f"점수 비율 {ratio:.0%}로 경쟁력 있음",
-                "method": "가점제",
-            })
-        for s in lottery:
-            rank.append({
-                "rank": len(rank) + 1,
-                "type": s["type"],
-                "score": None,
-                "max_score": None,
-                "ratio": None,
-                "reason": "추첨제 동등 기회로 병행 고려",
-                "method": "추첨제",
-            })
-    else:
-        for s in lottery:
-            rank.append({
-                "rank": len(rank) + 1,
-                "type": s["type"],
-                "score": None,
-                "max_score": None,
-                "ratio": None,
-                "reason": f"점수제 경쟁력({best_ratio:.0%}) 부족, 추첨제 우선 추천",
-                "method": "추첨제",
-            })
-        for s in scored_sorted:
-            ratio = s["score"] / s["max_score"]
-            rank.append({
-                "rank": len(rank) + 1,
-                "type": s["type"],
-                "score": s["score"],
-                "max_score": s["max_score"],
-                "ratio": f"{ratio:.0%}",
-                "reason": "보조 전략으로 점수제 병행 가능",
-                "method": "가점제",
-            })
+    general_ratio = general_supply_score / general_max_score if general_max_score > 0 else 0.0
 
-    if general_max_score > 0:
-        general_ratio = general_supply_score / general_max_score
-        rank.append({
-            "rank": len(rank) + 1,
-            "type": "일반공급",
-            "score": general_supply_score,
-            "max_score": general_max_score,
-            "ratio": f"{general_ratio:.0%}",
-            "reason": f"가점 {general_supply_score}/{general_max_score}점 ({general_ratio:.0%})",
+    def _lottery_entry(s: dict[str, Any], reason: str) -> dict[str, Any]:
+        return {
+            "type": s["type"],
+            "score": None,
+            "max_score": None,
+            "ratio": None,
+            "reason": reason,
+            "method": "추첨제",
+            "score_breakdown": s.get("score_breakdown", {}),
+            "matched_items": s.get("matched_items", []),
+            "missing_items": s.get("missing_items", []),
+            "source_refs": s.get("source_refs", []),
+        }
+
+    def _scored_entry(s: dict[str, Any], reason: str) -> dict[str, Any]:
+        ratio = s["score"] / s["max_score"]
+        return {
+            "type": s["type"],
+            "score": s["score"],
+            "max_score": s["max_score"],
+            "ratio": f"{ratio:.0%}",
+            "reason": reason,
             "method": "가점제",
-        })
+            "score_breakdown": s.get("score_breakdown", {}),
+            "matched_items": s.get("matched_items", []),
+            "missing_items": s.get("missing_items", []),
+            "source_refs": s.get("source_refs", []),
+        }
 
+    general_entry = {
+        "type": "일반공급",
+        "score": general_supply_score,
+        "max_score": general_max_score,
+        "ratio": f"{general_ratio:.0%}" if general_max_score > 0 else None,
+        "reason": f"가점 {general_supply_score}/{general_max_score}점 ({general_ratio:.0%})" if general_max_score > 0 else "",
+        "method": "가점제",
+        "score_breakdown": general_score_breakdown or {},
+        "matched_items": [],
+        "missing_items": [],
+        "source_refs": [],
+    }
+
+    confirmed_entries: list[dict[str, Any]] = []
+
+    if not lottery_eligible and not scored_sorted:
+        # 신청 가능 확정 특공이 없으면 일반공급을 최우선으로
+        confirmed_entries.append(general_entry)
+    elif lottery_eligible and best_ratio < COMPETITIVENESS_THRESHOLD:
+        for s in lottery_eligible:
+            confirmed_entries.append(_lottery_entry(s, "추첨제 우선 추천"))
+        for s in scored_sorted:
+            ratio = s["score"] / s["max_score"]
+            confirmed_entries.append(
+                _scored_entry(s, f"점수제 경쟁력({best_ratio:.0%}) 부족, 보조 전략으로 점수제 병행 가능")
+            )
+        confirmed_entries.append(general_entry)
+    else:
+        for s in scored_sorted:
+            confirmed_entries.append(_scored_entry(s, f"점수 비율 {s['score']/s['max_score']:.0%}로 경쟁력 있음"))
+        for s in lottery_eligible:
+            confirmed_entries.append(_lottery_entry(s, "추첨제 동등 기회로 병행 고려"))
+        confirmed_entries.append(general_entry)
+
+    unresolved_entries = [
+        _lottery_entry(
+            s,
+            f"기준 미달 항목 있음 ({', '.join(s.get('missing_items', []))}) — 확인 후 재검토 필요",
+        )
+        for s in lottery_unresolved
+    ]
+
+    rank = confirmed_entries + unresolved_entries
+    for index, entry in enumerate(rank):
+        entry["rank"] = index + 1
     return rank
 
 

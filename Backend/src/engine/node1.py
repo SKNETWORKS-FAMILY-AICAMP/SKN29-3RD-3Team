@@ -96,16 +96,18 @@ def _available_supply_types(profile: Mapping[str, Any]) -> list[str]:
 
 
 def _is_newlywed_candidate(profile: Mapping[str, Any]) -> bool:
-    marital_status = _text(profile.get("marital_status"))
-    if marital_status in MARRIED_VALUES:
-        return True
-
     marriage_period = _text(profile.get("marriage_period"))
     if marriage_period == "WITHIN_7_YEARS":
         return True
+    if marriage_period == "OVER_7_YEARS":
+        return False
 
     years = _int_value(profile.get("marriage_period_years"))
-    return years is not None and years <= 7
+    if years is not None:
+        return years <= 7
+
+    marital_status = _text(profile.get("marital_status"))
+    return marital_status in MARRIED_VALUES
 
 
 def _is_multi_child_candidate(profile: Mapping[str, Any]) -> bool:
@@ -169,6 +171,10 @@ def _build_special_supply_payload(profile: Mapping[str, Any]) -> dict[str, Any]:
         ),
     }
 
+def _is_married(profile: Mapping[str, Any]) -> bool:
+    marital_status = _text(profile.get("marital_status"))
+    return marital_status in MARRIED_VALUES
+
 
 def _build_housing_subscription_score_payload(
     profile: Mapping[str, Any],
@@ -182,7 +188,7 @@ def _build_housing_subscription_score_payload(
 
     payload: dict[str, Any] = {
         "birth_date": birth_date,
-        "is_married": _is_newlywed_candidate(profile),
+        "is_married": _is_married(profile),
         "dependent_family_count": _dependent_family_count(profile) or 0,
         "subscription_join_date": subscription_join_date,
     }

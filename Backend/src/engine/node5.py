@@ -100,11 +100,20 @@ def run_node5(state: Node5State) -> Node5State:
         f"(비율 {_format_percent(risk_result.get('ratio'))})"
     )
 
+    # 3) 지역 우선공급 여부 (당첨확률 계산에 쓰이므로 Agent 호출 전에 고정 실행)
+    regional_result = check_regional_priority.invoke({
+        "user_region": profile.get("region"),
+        "announcement_region": announcement.get("region"),
+    })
+    print(
+        f"  지역 우선공급: "
+        f"{'해당지역 거주자' if regional_result.get('is_same_region') else '비거주자'}"
+    )
+
     # ── STEP 2: create_react_agent (나머지 툴) ────────────────────
     print("\n[Node 5] STEP 2: ReAct Agent 실행")
 
     mock_tools = [
-        check_regional_priority,
         compare_supply_strategy,
         calculate_winning_probability,
         analyze_subscription_timing,
@@ -120,6 +129,23 @@ def run_node5(state: Node5State) -> Node5State:
         ),
         {},
     )
+
+    eligibility_gap_items = matched_supply.get("missing_items") or []
+    if eligibility_gap_items:
+        eligibility_rule = (
+            f"추천 공급 유형({recommended_supply})의 신청 자격(특공/일반공급 조건)은 아직 확정되지 않았습니다 "
+            f"(미확인 항목: {', '.join(eligibility_gap_items)}). "
+            "결론에서 \"자격 자체는 충분하다\"라는 표현을 절대 사용하지 말고, "
+            "위 미확인 항목을 먼저 확인해야 한다는 점을 자금 관련 내용보다 먼저 명시하세요."
+        )
+    else:
+        eligibility_rule = (
+            f"추천 공급 유형({recommended_supply})의 신청 자격(특공/일반공급 조건)은 "
+            "입력 정보 기준으로 충족한 것으로 분석되었습니다."
+        )
+
+    action_items = risk_result.get("action_items") or []
+    action_items_text = "\n".join(f"  - {item}" for item in action_items) if action_items else "  - 없음"
 
     agent_prompt = f"""
 다음 정보를 바탕으로 청약 전략을 분석해주세요.
@@ -142,21 +168,25 @@ def run_node5(state: Node5State) -> Node5State:
 - 대출 가능 금액: {loan_result['loan_amount']:,}원 (LTV {loan_result['ltv_rate']:.0%}, {loan_result['area_type']})
 - 실투자금: {investment_result['real_investment']:,}원
 - 자금 리스크: {risk_result['risk_level']} ({risk_result['description']})
+- 자금 관련 행동지침 (사전 계산됨):
+{action_items_text}
+
+[지역 우선공급 분석 결과 (사전 계산됨, 다시 계산하지 마세요)]
+- 거주지역 일치 여부: {"일치" if regional_result.get('is_same_region') else "불일치"}
+- 분석 내용: {regional_result.get('answer')}
+- 위 내용을 그대로 "지역 우선공급 여부" 섹션에 정리해서 보여주세요. check_regional_priority 툴은 이미 호출되었으니 다시 호출하지 마세요.
 
 [추천 공급 유형]
 - 추천: {recommended_supply}
 - 가능 유형: {', '.join(available_supply_types)}
 
 위 정보를 바탕으로 아래 순서대로 툴을 호출해 분석해주세요.
-1. check_regional_priority 툴 호출
-   - user_region: {profile.get('region')}
-   - announcement_region: {announcement.get('region')}
-2. compare_supply_strategy 툴 호출
+1. compare_supply_strategy 툴 호출
    - available_supplies: {supply_analysis.get('available_supplies', [])}
    - general_supply_score: {supply_analysis.get('general_supply_score')}
    - general_max_score: {supply_analysis.get('general_max_score')}
    - recommended_supply: {recommended_supply}
-3. calculate_winning_probability 툴 호출
+2. calculate_winning_probability 툴 호출
    - supply_type: {recommended_supply}
    - score: {matched_supply.get('score')}
    - max_score: {matched_supply.get('max_score')}
@@ -165,7 +195,8 @@ def run_node5(state: Node5State) -> Node5State:
    - region: {announcement.get('region')}
    - area: {announcement.get('area')}
    - recommended_supply: {recommended_supply}
-4. analyze_subscription_timing 툴 호출
+   - is_same_region: {regional_result.get('is_same_region')}
+3. analyze_subscription_timing 툴 호출
    - bankbook_type: {profile.get('bankbook_type')}
    - bankbook_payments: {profile.get('bankbook_payments')}
    - bankbook_join_date: {profile.get('bankbook_join_date')}
@@ -174,19 +205,27 @@ def run_node5(state: Node5State) -> Node5State:
 
 [당첨 확률 표시 규칙]
 - calculate_winning_probability 결과를 사용자에게 보여줄 때, winning_score나 breakdown 숫자는 절대 노출하지 마세요.
+- "당첨 가능성"이라는 단정적 표현을 쓰지 말고, 반드시 "참고용 경쟁력 지표"라는 표현을 사용하세요.
 - 다음 형식으로만 작성하세요.
-  당첨 가능성: (결과의 probability 값을 그대로 적으세요, 예: 상/중/하)
+  참고용 경쟁력 지표: (결과의 probability 값을 그대로 적으세요, 예: 상/중/하)
   판단 근거:
   - (결과의 reasons 리스트에 있는 각 문장을 하나씩 불릿으로)
   - (결과에 context_note가 있다면 마지막 불릿으로 추가)
-- 결과의 methodology_notice 내용을 이 섹션 바로 아래에 작은 안내문으로 반드시 포함하세요.
+- 결과의 methodology_notice 내용을 이 섹션 바로 아래에 반드시 별도 문단으로 포함하세요. 생략하거나 요약하지 말고 그대로 전달하세요.
+
+[자격 확정 여부]
+- {eligibility_rule}
 
 [결론 작성 규칙]
-- 자금 리스크가 "높음"인 경우, "적극적으로 청약에 참여하라"는 식의 권고를 절대 사용하지 마세요.
-  대신 "청약 자격 자체는 충분하나, 실투자금 대비 자금 부담이 크므로 중도금 대출이나 추가 자금 조달 계획을 사전에 점검해야 한다"는 방향으로 결론을 작성하세요.
-- 자금 리스크가 "중간"인 경우, "자격은 양호하나 자금 여유가 제한적이니 비상 자금을 확보해두는 것을 권장한다"는 균형 잡힌 결론을 작성하세요.
-- 자금 리스크가 "낮음"인 경우에만 "적극적으로 참여하라"는 권고를 사용하세요.
-- 결론은 반드시 위에서 제시된 자금 리스크 수준({risk_result['risk_level']})과 논리적으로 일치해야 합니다.
+- "신청 자격"(특공/일반공급 조건, 위 [자격 확정 여부] 내용)과 "1순위 자격"(analyze_subscription_timing 결과의 청약통장 가입기간/납입횟수 기준)은 서로 다른 개념입니다. 두 자격을 같은 단어("자격")로 섞어 쓰지 말고, 동사를 다르게 써서 명확히 구분하세요. "자격은 충족했으나 자격은 충족하지 못했다"처럼 같은 단어가 반복되는 문장은 절대 쓰지 마세요. 예: "청약 신청은 가능하나, 1순위 자격(가입기간/납입횟수)은 아직 충족하지 못했습니다."
+- 위 [자격 확정 여부]에서 신청 자격이 미확정이라고 했다면, 결론 첫 문장은 반드시 미확인 항목 확인을 우선 안내하고, 그 다음 1순위 자격, 자금 관련 내용을 순서대로 이어서 작성하세요. 이 경우 "자격 자체는 충분하다"는 표현을 절대 사용하지 마세요.
+- 아래 자금 리스크별 규칙은 자격 언급 없이 자금 측면만 다루세요. 자격에 대한 언급은 위 [자격 확정 여부] 문장과 1순위 자격 구분 규칙에서만 하세요.
+  - 자금 리스크가 "높음"인 경우, "적극적으로 청약에 참여하라"는 식의 권고를 절대 사용하지 마세요.
+    대신 "실투자금 대비 자금 부담이 크므로 중도금 대출이나 추가 자금 조달 계획을 사전에 점검해야 한다"는 방향으로 작성하세요.
+  - 자금 리스크가 "중간"인 경우, "자금 여유가 제한적이니 비상 자금을 확보해두는 것을 권장한다"는 균형 잡힌 결론을 작성하세요.
+  - 자금 리스크가 "낮음"인 경우에만 "적극적으로 참여하라"는 권고를 사용하세요.
+- 결론은 반드시 위에서 제시된 자금 리스크 수준({risk_result['risk_level']})과 [자격 확정 여부], 1순위 자격 분석 결과 모두와 논리적으로 일치해야 합니다.
+- 결론 문단이 끝난 뒤, "다음 행동" 섹션을 별도로 만들고 위 [재무 분석 결과]의 "자금 관련 행동지침"을 각각 불릿으로 그대로 나열하세요. 행동지침의 문구를 바꾸거나 요약하지 말고 그대로 전달하세요.
 """
 
     agent_response = agent.invoke({
