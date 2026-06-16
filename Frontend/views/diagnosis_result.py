@@ -116,11 +116,11 @@ def render_langgraph_result(response: dict[str, Any]) -> None:
     if not report and not node5 and not response.get("node2"):
         return
 
-    _render_recommendation(response, report)
-    _render_supply_rank(response, report)
-    _render_announcement(report, response)
-    _render_finance(report, node5)
-    _render_strategy(report, node5)
+    with st.expander("상세 근거 보기", expanded=False):
+        _render_supply_rank(response, report)
+        _render_announcement(report, response)
+        _render_finance(report, node5)
+        _render_strategy(report, node5)
 
 
 def _report_from_response(response: dict[str, Any]) -> dict[str, Any]:
@@ -256,8 +256,8 @@ def _render_strategy(report: dict[str, Any], node5: dict[str, Any]) -> None:
         st.markdown("#### 최종 리포트")
         st.write(summary)
     if strategy:
-        st.markdown("#### 최종 전략")
-        st.write(strategy)
+        with st.expander("전략 분석 원문", expanded=False):
+            st.write(strategy)
 
 
 def _report_type_label(value: Any) -> str:
@@ -270,5 +270,13 @@ def _report_type_label(value: Any) -> str:
 
 def _money(value: Any) -> str:
     if isinstance(value, (int, float)):
-        return f"{int(value):,}원"
+        amount = int(value)
+        if amount >= 100_000_000:
+            major = amount / 100_000_000
+            if major.is_integer():
+                return f"{int(major)}억 원"
+            return f"{major:.1f}억 원"
+        if amount >= 10_000:
+            return f"{amount // 10_000:,}만 원"
+        return f"{amount:,}원"
     return "-"
