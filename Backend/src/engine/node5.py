@@ -100,12 +100,20 @@ def run_node5(state: Node5State) -> Node5State:
         analyze_subscription_timing,
     ]
 
-
     agent = create_react_agent(llm, tools=mock_tools)
 
+    # recommended_supply와 실제로 일치하는 항목을 찾아서 사용
+    matched_supply = next(
+        (
+            s for s in supply_analysis.get("available_supplies", [])
+            if s.get("type") == recommended_supply
+        ),
+        {},
+    )
 
     agent_prompt = f"""
 다음 정보를 바탕으로 청약 전략을 분석해주세요.
+각 단계 점수의 이유(reasons)를 빠짐없이 사용자에게 설명해주세요.
 
 [사용자 정보]
 - 거주지역: {profile.get('region')}
@@ -140,9 +148,9 @@ def run_node5(state: Node5State) -> Node5State:
    - recommended_supply: {recommended_supply}
 3. calculate_winning_probability 툴 호출
    - supply_type: {recommended_supply}
-   - score: {supply_analysis.get('available_supplies', [{}])[0].get('score')}
-   - max_score: {supply_analysis.get('available_supplies', [{}])[0].get('max_score')}
-   - method: {supply_analysis.get('available_supplies', [{}])[0].get('method')}
+   - score: {matched_supply.get('score')}
+   - max_score: {matched_supply.get('max_score')}
+   - method: {matched_supply.get('method')}
    - supply_count: {announcement.get('supply_count')}
    - region: {announcement.get('region')}
    - area: {announcement.get('area')}

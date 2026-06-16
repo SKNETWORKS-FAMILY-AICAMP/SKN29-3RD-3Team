@@ -140,6 +140,8 @@ def _build_special_supply_payload(profile: Mapping[str, Any]) -> dict[str, Any]:
         "is_household_head": _bool_value(profile.get("is_household_head")),
         "marital_status": _normalize_marital_status(profile.get("marital_status")),
         "marriage_period": _normalize_marriage_period(profile),
+        "marriage_period_years": _int_value(profile.get("marriage_period_years")),
+        "is_dual_income": _bool_value(profile.get("is_dual_income")),
         "has_two_or_more_minor_children": has_two_or_more,
         "child_count_group": _normalize_child_count_group(profile),
         "youngest_child_age_group": profile.get("youngest_child_age_group"),

@@ -8,6 +8,9 @@ from src.engine.tools.calculator.housing_subscription_score_constants import (
     get_primary_source_ref,
     load_housing_subscription_score_table,
 )
+from src.engine.tools.calculator.household_income_constants import (
+    get_household_income_100_percent,
+)
 from src.engine.tools.calculator.special_supply_rules import load_special_supply_rules
 
 
@@ -38,7 +41,9 @@ class SpecialSupplyInput(BaseModel):
     is_household_head: bool | None = None
     marital_status: str | None = None
     marriage_period: str | None = None
+    marriage_period_years: int | None = Field(default=None, ge=0)
     has_two_or_more_minor_children: bool | None = None
+    is_dual_income: bool | None = None
     child_count_group: str | None = None
     youngest_child_age_group: str | None = None
     has_property_history: bool | None = None
@@ -543,6 +548,28 @@ def _score_multi_child_table(
 
     return scores
 
+def _score_income_bucket(
+    profile: SpecialSupplyInput,
+    unknown_fields: list[str],
+) -> int | None:
+    income = profile.average_monthly_income
+    members = profile.num_household_members
+    is_dual_income = profile.is_dual_income
+
+    if income is None or members is None:
+        unknown_fields.append("income_score_bucket")
+        return None
+    if is_dual_income is None:
+        unknown_fields.append("is_dual_income")
+        return None
+
+    standard_100 = get_household_income_100_percent(members)
+    if standard_100 is None:
+        unknown_fields.append("income_score_bucket")
+        return None
+
+    threshold = standard_100 if is_dual_income else standard_100 * 0.8
+    return 1 if income <= threshold else 0
 
 def _score_public_family_table(
     profile: SpecialSupplyInput,
@@ -553,9 +580,9 @@ def _score_public_family_table(
 ) -> dict[str, int]:
     scores: dict[str, int] = {}
 
-    # The current profile has income amount but not the exact household income
-    # ratio bucket, so keep the income point unknown instead of guessing.
-    unknown_fields.append("income_score_bucket")
+    income_score = _score_income_bucket(profile, unknown_fields)
+    if income_score is not None:
+        scores["income"] = income_score
 
     minor_child_count = profile.minor_child_count
     if minor_child_count is None and profile.child_count_group == "ONE":
@@ -588,7 +615,9 @@ def _score_public_family_table(
         scores["bankbook_payments"] = payment_score
 
     if include_marriage_period:
-        marriage_years = _marriage_period_to_years(profile.marriage_period)
+        marriage_years = profile.marriage_period_years
+        if marriage_years is None:
+            marriage_years = _marriage_period_to_years(profile.marriage_period)
         marriage_score = _score_year_value(
             marriage_years,
             [(0, 3, 3), (3, 5, 2), (5, 7, 1)],
