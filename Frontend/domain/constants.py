@@ -61,14 +61,6 @@ PROPERTY_HISTORY_OPTIONS = [
 ]
 
 DETAIL_FIELD_OPTIONS = {
-    "marriage_period": {
-        "label": "혼인기간",
-        "options": [
-            {"value": "WITHIN_7_YEARS", "label": "7년 이내", "description": "신혼부부 특별공급 후보로 추가 검토"},
-            {"value": "OVER_7_YEARS", "label": "7년 초과", "description": "신혼부부 특별공급 가능성 낮음"},
-            {"value": "UNKNOWN", "label": "모름", "description": "정확한 혼인신고일 확인 필요"},
-        ],
-    },
     "youngest_child_age_group": {
         "label": "가장 어린 자녀 연령",
         "options": [
@@ -104,6 +96,11 @@ DETAIL_FIELD_OPTIONS = {
         ],
     },
 }
+
+SIMULATE_CHOICE_OPTIONS = [
+    {"value": True, "label": "예, 공고 기반 상세 시뮬레이션을 원해요", "description": "공고문 정보를 입력해 상세 리포트를 받습니다"},
+    {"value": False, "label": "아니요, 기본 리포트만 볼게요", "description": "입력한 프로필 기준의 기본 리포트만 받습니다"},
+]
 
 RECOMMENDED_QUESTIONS = [
     "청약통장 가입일은 왜 필요한가요?",

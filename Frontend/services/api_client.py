@@ -209,7 +209,6 @@ def _normalize_resume_response(response: dict[str, Any]) -> dict[str, Any]:
     report = response.get("report") if isinstance(response.get("report"), dict) else {}
     summary = (
         report.get("summary")
-        or report.get("strategy")
         or response.get("message")
         or "백엔드 그래프 응답을 받았습니다."
     )

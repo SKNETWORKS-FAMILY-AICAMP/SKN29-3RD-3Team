@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
+import streamlit as st
 
 DETAIL_PAYLOAD_FIELDS = (
     "marriage_period",
@@ -145,7 +146,20 @@ def validate_step(
             if error.startswith(("가구", "맞벌이", "주택", "총자산"))
         ]
         return optional_errors + validate_detail_payload(detail_payload)
+    if step_key == "announcement":
+        return validate_announcement_step()
     return errors
+
+
+def validate_announcement_step() -> list[str]:
+    wants_detailed = st.session_state.get("wants_detailed_diagnosis_choice")
+    if wants_detailed is None:
+        return ["상세 시뮬레이션 여부를 선택해야 합니다."]
+    if wants_detailed is True:
+        announcement_text = str(st.session_state.get("announcement_text") or "").strip()
+        if not announcement_text:
+            return ["상세 시뮬레이션을 선택한 경우 공고 정보를 입력해야 합니다."]
+    return []
 
 
 def build_profile_payload(form: DiagnosisForm) -> dict[str, Any]:
@@ -209,6 +223,8 @@ def build_backend_compatible_payload(
         "birth_year": profile["birth_year"],
         "minor_children_status": profile["minor_children_status"] or "UNKNOWN",
         "minor_child_count": profile["minor_child_count"],
+        "child_count_group": detail.get("child_count_group"),
+        "youngest_child_age_group": detail.get("youngest_child_age_group"),
         "is_elderly_parent": is_elderly_parent,
         "elderly_parent_years": 3 if is_elderly_parent else None,
         "is_dual_income": profile["is_dual_income"],

@@ -66,8 +66,9 @@ def render_result_step() -> None:
 def run_diagnosis(form: DiagnosisForm) -> None:
     detail_payload = build_detail_payload()
     backend_payload = build_backend_compatible_payload(form, detail_payload)
-    announcement_text = build_announcement_payload()
-    backend_payload["wants_detailed_diagnosis"] = "예" if announcement_text else "아니오"
+    wants_detailed = bool(st.session_state.get("wants_detailed_diagnosis_choice"))
+    announcement_text = build_announcement_payload() if wants_detailed else None
+    backend_payload["wants_detailed_diagnosis"] = "예" if wants_detailed else "아니오"
     if announcement_text:
         backend_payload["announcement_text"] = announcement_text
     st.session_state["last_detail_payload"] = detail_payload
@@ -85,9 +86,9 @@ def run_diagnosis(form: DiagnosisForm) -> None:
             st.session_state["last_diagnosis_session_id"] = session_id
             st.session_state["last_simulate_response"] = client.simulate(
                 session_id,
-                bool(announcement_text),
+                wants_detailed,
             )
-            if announcement_text:
+            if wants_detailed and announcement_text:
                 response = client.announcement(session_id, announcement_text)
             else:
                 response = st.session_state["last_simulate_response"]
@@ -149,6 +150,22 @@ def _render_recommendation(response: dict[str, Any], report: dict[str, Any]) -> 
     cols[2].metric("처리 상태", response.get("result_status", "-"))
 
 
+SCORE_BREAKDOWN_LABELS = {
+    "income": "소득 기준",
+    "minor_child_count": "미성년 자녀 수",
+    "residence_period_years": "거주 기간",
+    "bankbook_payments": "청약통장 납입 횟수",
+    "marriage_period": "혼인 기간",
+    "homeless_period_years": "무주택 기간",
+    "bankbook_joined_months": "청약통장 가입 기간",
+    "youngest_child_age_group": "가장 어린 자녀 연령",
+    "homeless_score": "무주택기간 점수",
+    "dependent_family_score": "부양가족 점수",
+    "subscription_score": "청약통장 가입기간 점수",
+    "spouse_subscription_score": "배우자 청약통장 가입기간 점수",
+}
+
+
 def _render_supply_rank(response: dict[str, Any], report: dict[str, Any]) -> None:
     supply_rank = report.get("supply_rank") or response.get("supply_rank") or []
     if not supply_rank:
@@ -158,9 +175,37 @@ def _render_supply_rank(response: dict[str, Any], report: dict[str, Any]) -> Non
             or ((node2.get("supply_analysis") or {}).get("ranked_supplies") or [])
             or ((node2.get("supply_analysis") or {}).get("available_supplies") or [])
         )
-    if supply_rank:
-        st.markdown("#### 공급유형별 결과")
-        st.dataframe(supply_rank, use_container_width=True)
+    if not supply_rank:
+        return
+
+    st.markdown("#### 공급유형별 결과")
+    for item in supply_rank:
+        if not isinstance(item, dict):
+            continue
+        score = item.get("score")
+        max_score = item.get("max_score")
+        score_label = f"{score}/{max_score}점" if score is not None and max_score is not None else "추정 또는 별도 기준"
+        with st.container(border=True):
+            st.markdown(f"**{item.get('rank')}순위 — {item.get('type', '공급 유형')}** ({score_label})")
+            if item.get("reason"):
+                st.caption(item["reason"])
+
+            score_breakdown = item.get("score_breakdown") or {}
+            if score_breakdown:
+                st.markdown("점수 산출 근거")
+                for key, value in score_breakdown.items():
+                    label = SCORE_BREAKDOWN_LABELS.get(key, key)
+                    st.markdown(f"- {label}: {value}점")
+
+            missing_items = item.get("missing_items") or []
+            if missing_items:
+                st.markdown("부족/확인 필요 항목")
+                for missing in missing_items:
+                    st.markdown(f"- {missing}")
+
+            source_refs = item.get("source_refs") or []
+            if source_refs:
+                st.caption("출처: " + ", ".join(source_refs))
 
 
 def _render_announcement(report: dict[str, Any], response: dict[str, Any]) -> None:

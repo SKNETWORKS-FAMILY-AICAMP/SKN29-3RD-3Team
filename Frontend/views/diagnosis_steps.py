@@ -15,6 +15,7 @@ from domain.constants import (
     MARITAL_STATUS_OPTIONS,
     PROPERTY_HISTORY_OPTIONS,
     REGION_OPTIONS,
+    SIMULATE_CHOICE_OPTIONS,
     YES_NO_OPTIONS,
 )
 from services.payload import validate_step
@@ -271,21 +272,33 @@ def render_optional_step() -> None:
 
 def render_announcement_step() -> None:
     st.subheader("5. 공고 정보")
-    st.caption("공고 정보를 입력하면 상세 시뮬레이션을 진행하고, 비워두면 현재 입력값만으로 최종 리포트를 생성합니다.")
 
-    st.markdown("**입력 예시**")
-    st.caption("예: 의왕시, 비규제지역, 민간, 59타입, 분양가 6억, 공급 120세대")
-    st.caption("예: 서울 강남구 투기과열지구에 있는 민간분양 전용 84㎡ 공고이고 분양가는 15억, 공급은 300세대입니다.")
-    st.text_area(
-        "공고 정보를 입력해 주세요",
-        placeholder="예: 서울 강남구 투기과열지구에 있는 민간분양 전용 84㎡ 공고이고 분양가는 15억, 공급은 300세대입니다.",
-        height=120,
-        key=widget_key("announcement_text", ""),
-        on_change=persist_widget,
-        args=("announcement_text",),
+    wants_detailed = card_choice(
+        "공고 기반 상세 시뮬레이션을 진행하시겠어요?",
+        "wants_detailed_diagnosis_choice",
+        SIMULATE_CHOICE_OPTIONS,
+        columns=2,
     )
-    if not str(st.session_state.get("announcement_text") or "").strip():
-        st.info("공고 정보를 비워두면 상세 공고 분석 없이 기본 리포트로 진행합니다.")
+
+    if wants_detailed is True:
+        st.markdown("**입력 예시**")
+        st.caption("예: 의왕시, 비규제지역, 민간, 59타입, 분양가 6억, 공급 120세대")
+        st.caption("예: 서울 강남구 투기과열지구에 있는 민간분양 전용 84㎡ 공고이고 분양가는 15억, 공급은 300세대입니다.")
+        st.text_area(
+            "공고 정보를 입력해 주세요",
+            placeholder="예: 서울 강남구 투기과열지구에 있는 민간분양 전용 84㎡ 공고이고 분양가는 15억, 공급은 300세대입니다.",
+            height=120,
+            key=widget_key("announcement_text", ""),
+            on_change=persist_widget,
+            args=("announcement_text",),
+        )
+        if not str(st.session_state.get("announcement_text") or "").strip():
+            st.warning("상세 시뮬레이션을 선택하셨습니다. 공고 정보를 입력해야 다음 단계로 진행할 수 있습니다.")
+    elif wants_detailed is False:
+        st.session_state["announcement_text"] = ""
+        st.caption("기본 리포트로 진행합니다. 공고 정보 입력은 건너뜁니다.")
+    else:
+        st.info("위 선택지 중 하나를 선택하면 다음 단계로 진행할 수 있습니다.")
 
 
 def render_navigation(step_index: int) -> None:
