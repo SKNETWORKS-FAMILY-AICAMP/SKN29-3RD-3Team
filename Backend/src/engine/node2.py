@@ -125,25 +125,24 @@ def _build_supply_rank(
     ]
     lottery = [s for s in available_supplies if s["method"] == "추첨제"]
 
-    best_ratio = max(
-        (s["score"] / s["max_score"] for s in scored),
-        default=0.0,
-    )
+    scored_sorted = sorted(scored, key=lambda s: s["score"] / s["max_score"], reverse=True)
+    best_ratio = scored_sorted[0]["score"] / scored_sorted[0]["max_score"] if scored_sorted else 0.0
 
-    if scored and best_ratio >= COMPETITIVENESS_THRESHOLD:
-        best = max(scored, key=lambda s: s["score"] / s["max_score"])
-        rank.append({
-            "rank": 1,
-            "type": best["type"],
-            "score": best["score"],
-            "max_score": best["max_score"],
-            "ratio": f"{best_ratio:.0%}",
-            "reason": f"점수 비율 {best_ratio:.0%}로 경쟁력 있음",
-            "method": "가점제",
-        })
+    if scored_sorted and best_ratio >= COMPETITIVENESS_THRESHOLD:
+        for s in scored_sorted:
+            ratio = s["score"] / s["max_score"]
+            rank.append({
+                "rank": len(rank) + 1,
+                "type": s["type"],
+                "score": s["score"],
+                "max_score": s["max_score"],
+                "ratio": f"{ratio:.0%}",
+                "reason": f"점수 비율 {ratio:.0%}로 경쟁력 있음",
+                "method": "가점제",
+            })
         for s in lottery:
             rank.append({
-                "rank": 2,
+                "rank": len(rank) + 1,
                 "type": s["type"],
                 "score": None,
                 "max_score": None,
@@ -152,9 +151,9 @@ def _build_supply_rank(
                 "method": "추첨제",
             })
     else:
-        for i, s in enumerate(lottery, 1):
+        for s in lottery:
             rank.append({
-                "rank": i,
+                "rank": len(rank) + 1,
                 "type": s["type"],
                 "score": None,
                 "max_score": None,
@@ -162,14 +161,14 @@ def _build_supply_rank(
                 "reason": f"점수제 경쟁력({best_ratio:.0%}) 부족, 추첨제 우선 추천",
                 "method": "추첨제",
             })
-        if scored:
-            best = max(scored, key=lambda s: s["score"] / s["max_score"])
+        for s in scored_sorted:
+            ratio = s["score"] / s["max_score"]
             rank.append({
-                "rank": len(lottery) + 1,
-                "type": best["type"],
-                "score": best["score"],
-                "max_score": best["max_score"],
-                "ratio": f"{best_ratio:.0%}",
+                "rank": len(rank) + 1,
+                "type": s["type"],
+                "score": s["score"],
+                "max_score": s["max_score"],
+                "ratio": f"{ratio:.0%}",
                 "reason": "보조 전략으로 점수제 병행 가능",
                 "method": "가점제",
             })
