@@ -117,7 +117,37 @@ def render_explanation(title: str, items: Sequence[str]) -> None:
             st.markdown(f"- {item}")
 
 
+def _top_supply_rank(response: dict, limit: int = 3) -> list[dict[str, Any]]:
+    supply_rank = response.get("supply_rank")
+    if not isinstance(supply_rank, list):
+        return []
+    return [item for item in supply_rank[:limit] if isinstance(item, dict)]
+
+
 def render_result(response: dict) -> None:
+    supply_rank = _top_supply_rank(response)
+    if supply_rank:
+        st.subheader("추천 순위 Top 3")
+        rank_columns = st.columns(min(3, len(supply_rank)))
+        for index, item in enumerate(supply_rank):
+            with rank_columns[index]:
+                with st.container(border=True):
+                    st.markdown(f"#### {item.get('rank')}위")
+                    st.markdown(f"**{item.get('type', '공급 유형')}**")
+                    score = item.get("score")
+                    max_score = item.get("max_score")
+                    if score is None or max_score is None:
+                        st.caption("추첨제/조건형")
+                    else:
+                        ratio = item.get("ratio")
+                        st.caption(f"{score}/{max_score}점" + (f" ({ratio})" if ratio else ""))
+                    if item.get("reason"):
+                        st.write(item["reason"])
+
+    if response.get("final_report"):
+        st.subheader("최종 결론")
+        st.markdown(response["final_report"])
+
     st.subheader(f"종합 상태: {response.get('result_status', '추가 확인 필요')}")
     if response.get("result_mode"):
         st.caption(f"결과 모드: {response['result_mode']}")
