@@ -1,6 +1,5 @@
 .env
-__pycachec__/
+__pycache__/
 *.py[cod]
 Backend/src/preprocessing/chroma_db/
-__init__.py
 *.pyc

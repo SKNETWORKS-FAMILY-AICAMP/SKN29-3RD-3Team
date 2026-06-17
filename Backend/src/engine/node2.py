@@ -2,6 +2,12 @@
 
 Node 2 does not wire graph edges. It reads Node 1 state and returns only the
 recommendation payload expected by the pipeline.
+
+수정 메모(2026-06-17):
+- 사유: 45% 점수제 항목도 "경쟁력 있음"으로 표시되어 사용자에게 과한 신호를 주는 문제 보정.
+- 위치: `_build_supply_rank()`의 점수제 공급유형 reason 생성 및 `_scored_entry()` 반환값.
+- 내용: 점수 비율을 80/60/40% 구간으로 나누고 `competitiveness` 필드를 함께 반환.
+- 자세한 변경 기록은 `Frontend/FINAL_FRONT_DEBUG_CHANGELOG.md`를 참고.
 """
 
 from __future__ import annotations
@@ -70,6 +76,28 @@ def _build_general_score_breakdown(general_result: Mapping[str, Any]) -> dict[st
         if isinstance(value, int) and value > 0:
             breakdown[key] = value
     return breakdown
+
+
+def _score_competitiveness(ratio: float) -> str:
+    """점수 비율을 사용자 화면에 바로 쓸 수 있는 경쟁력 등급으로 변환한다."""
+    if ratio >= 0.8:
+        return "매우 높음"
+    if ratio >= 0.6:
+        return "높음"
+    if ratio >= 0.4:
+        return "보통"
+    return "낮음"
+
+
+def _score_reason(ratio: float) -> str:
+    """점수제 공급유형의 추천 사유 문구를 경쟁력 구간에 맞춰 생성한다."""
+    competitiveness = _score_competitiveness(ratio)
+    if competitiveness in {"매우 높음", "높음"}:
+        return f"점수 비율 {ratio:.0%}로 경쟁력 {competitiveness}"
+    if competitiveness == "보통":
+        return f"점수 비율 {ratio:.0%}로 보통 수준"
+    return f"점수 비율 {ratio:.0%}로 경쟁력 낮음"
+
 
 def _available_supply_types(state: Mapping[str, Any]) -> list[str]:
     raw_values = state.get("available_supply_types") or []
@@ -168,6 +196,7 @@ def _build_supply_rank(
             "score": s["score"],
             "max_score": s["max_score"],
             "ratio": f"{ratio:.0%}",
+            "competitiveness": _score_competitiveness(ratio),
             "reason": reason,
             "method": "가점제",
             "score_breakdown": s.get("score_breakdown", {}),
@@ -205,7 +234,8 @@ def _build_supply_rank(
         confirmed_entries.append(general_entry)
     else:
         for s in scored_sorted:
-            confirmed_entries.append(_scored_entry(s, f"점수 비율 {s['score']/s['max_score']:.0%}로 경쟁력 있음"))
+            ratio = s["score"] / s["max_score"]
+            confirmed_entries.append(_scored_entry(s, _score_reason(ratio)))
         for s in lottery_eligible:
             confirmed_entries.append(_lottery_entry(s, "추첨제 동등 기회로 병행 고려"))
         confirmed_entries.append(general_entry)
