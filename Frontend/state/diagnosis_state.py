@@ -17,6 +17,42 @@ STEPS = [
     ("result", "결과"),
 ]
 
+DIAGNOSIS_STATE_KEYS = [
+    "bankbook_type",
+    "bankbook_join_date",
+    "bankbook_payments",
+    "bankbook_balance",
+    "region",
+    "residence_period_years",
+    "is_homeless",
+    "homeless_period_years",
+    "is_household_head",
+    "num_household_members",
+    "birth_year",
+    "marital_status",
+    "marriage_period_years",
+    "child_status",
+    "minor_children_status",
+    "minor_child_count",
+    "dual_income_status",
+    "average_monthly_income",
+    "has_property_history",
+    "total_assets",
+    "wants_detailed_diagnosis_choice",
+    "announcement_text",
+]
+
+DIAGNOSIS_RESPONSE_KEYS = [
+    "last_diagnosis_response",
+    "last_detail_response",
+    "last_simulate_response",
+    "last_diagnosis_session_id",
+    "last_profile_payload",
+    "last_backend_payload",
+    "last_detail_payload",
+    "last_api_error",
+]
+
 
 def build_form_from_state() -> DiagnosisForm:
     child_status = st.session_state.get("child_status")
@@ -112,3 +148,22 @@ def collect_response_questions(response: dict) -> list[str]:
             seen.add(question)
             result.append(question)
     return result
+
+
+def reset_diagnosis_state() -> None:
+    """테마/챗봇은 유지하고 자가진단 입력과 결과 상태만 초기화한다."""
+    for key in DIAGNOSIS_STATE_KEYS:
+        st.session_state.pop(key, None)
+        st.session_state.pop(f"_input_{key}", None)
+
+    for field in DETAIL_FIELD_OPTIONS:
+        st.session_state.pop(detail_widget_key(field), None)
+
+    for key in DIAGNOSIS_RESPONSE_KEYS:
+        st.session_state.pop(key, None)
+
+    for key in list(st.session_state.keys()):
+        if str(key).startswith("validation_errors_"):
+            st.session_state.pop(key, None)
+
+    st.session_state["diagnosis_step"] = 0
