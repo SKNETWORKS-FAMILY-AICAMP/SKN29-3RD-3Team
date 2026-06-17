@@ -230,6 +230,127 @@
 - 검증:
   - `git ls-files "*.pyc"` 결과 없음.
 
+#### 11. 입력 검증 경고와 챗봇 출처 표시 개선
+
+- 파일:
+  - `Frontend/views/diagnosis_steps.py`
+  - `Frontend/views/chatbot_panel.py`
+  - `Frontend/components/ui.py`
+- 목적:
+  - 자가진단 입력 단계에서 필수값 경고가 여러 개의 빨간 박스로 쌓여 화면이 지저분해지는 문제를 줄이기 위함.
+  - FAQ 챗봇 답변에서 출처가 본문 끝에 긴 문자열로 붙거나 중복되어 답변 가독성을 해치는 문제를 개선하기 위함.
+  - 백엔드 RAG 흐름은 유지하고, 프론트 표시 방식 중심으로 정리하기 위함.
+- 변경 내용:
+  - `다음` 버튼을 눌렀을 때만 현재 단계의 필수 입력 오류를 검사하고, 여러 오류를 요약 경고 1개로 표시.
+  - 오류 요약을 버튼 컬럼 내부가 아니라 버튼 행 아래 전체 폭으로 이동해 `이전`/`다음` 버튼의 수평 정렬을 유지.
+  - 사용자가 입력값을 고치면 기존 경고 요약이 현재 오류 상태에 맞춰 자동 갱신/해제되도록 처리.
+  - 입력 단계 중간에 즉시 표시되던 일부 빨간 오류를 안내성 caption으로 완화.
+  - 세대 구성원 수의 `min_value=1` 컴포넌트 제약을 제거해 브라우저 기본 검증 말풍선 대신 프론트 요약 검증으로 안내되도록 변경.
+  - 챗봇 응답의 `answer`와 `sources`를 분리해 세션에 저장.
+  - 답변 본문에 섞여 들어온 `출처:`/`참고 자료:` 라인을 프론트에서 분리.
+  - 출처 목록은 중복 제거 후 `참고한 자료` expander 안에 chip 형태로 표시.
+  - 긴 출처명은 UI 라벨로 정리하고 과도하게 길면 말줄임 처리.
+- 역할:
+  - 사용자는 입력 중 빨간 경고에 계속 노출되지 않고, 다음 단계로 넘어가려는 시점에만 수정할 항목을 확인할 수 있음.
+  - 검증 메시지가 버튼 자리를 밀어내지 않아 이전/다음 내비게이션 정렬이 유지됨.
+  - 챗봇 답변은 본문과 출처가 분리되어 읽기 쉬워지고, 출처는 필요할 때 접어서 확인할 수 있음.
+- 검증:
+  - `python -m py_compile Frontend/views/diagnosis_steps.py Frontend/views/chatbot_panel.py Frontend/components/ui.py` 통과.
+
+#### 12. 발표용 라이트/다크 테마 선택 추가
+
+- 파일:
+  - `Frontend/components/ui.py`
+- 목적:
+  - 발표 환경에서 브라우저/OS 설정이나 화면 밝기에 맞춰 서비스를 빠르게 전환할 수 있도록 하기 위함.
+  - Streamlit 기본 `Deploy`/툴바 대신 서비스 내부에서 제어 가능한 테마 선택 경험을 제공하기 위함.
+  - 기존 라이트모드의 신뢰감 있는 블루 기반 톤을 다크모드에서도 유지하기 위함.
+- 변경 내용:
+  - 사이드바 상단 `내집각` 아래에 `화면 테마` 선택 컨트롤 추가.
+    - `라이트`
+    - `다크`
+  - `st.session_state["theme_mode"]`로 선택값 유지.
+  - 페이지 이동 시 테마가 `라이트`로 되돌아가는 문제를 줄이기 위해 `theme` query param과 Streamlit cache 기반 테마 저장소에 선택값 동기화.
+  - `set_page_style()` 내부에 `_theme_css()`를 연결해 라이트/다크 색상 토큰을 주입.
+  - Streamlit 기본 테마는 런타임 변경이 불가능해, 혼선을 줄이기 위해 `시스템 설정` 옵션은 제거.
+  - 주요 커스텀 UI 영역에 다크모드 override 적용:
+    - 랜딩 hero/preview/feature 카드
+    - 결과 hero/status chip/next action
+    - 자가진단 guide/stepper/container
+    - 챗봇 출처 chip
+    - 입력 검증 요약 카드
+    - 사이드바와 주요 입력 컴포넌트
+  - 다크모드에서 흰색으로 남던 보조 버튼, disabled 버튼, number input 증감 버튼, select/input 배경을 추가 보정.
+  - 실제 화면 확인 결과를 바탕으로 상단 Streamlit header, selectbox 드롭다운 listbox, label/caption 텍스트 대비를 추가 보정.
+  - 추가 화면 확인 결과를 바탕으로 placeholder, expander, JSON/code payload, chat message, chat input, segmented control 색상 보정.
+  - 다크모드에서 `라이트/다크` segmented control의 비선택 항목이 흰색으로 튀는 문제와 채팅 메시지 박스 대비를 추가 보정.
+  - `라이트/다크` 선택 UI를 Streamlit 기본 segmented control에서 버튼형 토글로 변경해 새 탭/링크 이동 없이 현재 화면에서 즉시 전환되도록 수정.
+  - 다크모드 placeholder를 더 밝게 조정하고 number input의 `-`/`+` 아이콘 대비를 추가 보정.
+  - 다크모드에서 bordered container 경계가 묻히는 문제를 줄이기 위해 경계선 색과 inset shadow를 보강.
+  - 결과 Top3 카드를 HTML 기반 고정 높이 카드로 변경해 라이트/다크 모두 카드 크기와 정보 구조를 통일.
+  - 추천 카드의 `확인 필요` 표현을 `조건 미달 가능 항목`으로 변경해 부족 정보와 기준 미달 의미가 혼동되지 않도록 조정.
+  - 다크모드 텍스트/버튼/채팅 답변의 대비를 높여 발표 화면에서 긴 답변을 읽기 쉽도록 보정.
+- 역할:
+  - 발표 중 라이트/다크 화면을 즉시 비교할 수 있음.
+  - 완전한 Streamlit 테마 교체가 아니라, 현재 서비스 디자인 언어를 유지하는 커스텀 UI 중심 다크모드로 안정성 확보.
+- 검증:
+  - `python -m py_compile Frontend/components/ui.py` 통과.
+
+#### 13. 결과 화면 재실행 버튼 위치 조정
+
+- 파일:
+  - `Frontend/views/diagnosis_result.py`
+- 목적:
+  - 사용자가 결과 내용을 읽기 전에 상단에서 바로 `자가진단 다시 실행`을 보게 되는 흐름을 줄이기 위함.
+  - 이전 단계의 `이전`/`다음` 내비게이션과 같은 위치 감각으로 결과 화면 행동을 배치하기 위함.
+- 변경 내용:
+  - 결과 화면 상단의 `자가진단 다시 실행` 버튼 제거.
+  - 기존 공통 하단 내비게이션의 `다음` 위치에 `자가진단 다시 시작` primary 버튼 배치.
+  - 결과 단계에서는 별도 내비게이션을 새로 만들지 않고 기존 `이전` 버튼 옆에 재실행 버튼만 표시.
+  - 버튼 클릭 시 입력값과 결과 캐시를 초기화하고 1단계로 이동하도록 변경.
+- 역할:
+  - 결과를 충분히 읽은 뒤 처음부터 다시 입력하는 사용자 흐름으로 정리.
+  - 결과 단계에서도 이전 단계들과 같은 내비게이션 한 줄 구조 유지.
+- 검증:
+  - `python -m py_compile Frontend/views/diagnosis_result.py` 통과.
+
+#### 14. Streamlit 버튼 ID 중복 오류 수정
+
+- 파일:
+  - `Frontend/views/diagnosis_steps.py`
+  - `Frontend/views/diagnosis_result.py`
+  - `Frontend/components/ui.py`
+- 목적:
+  - `이전`/`다음` 버튼이 여러 위치에서 같은 파라미터로 렌더링되며 `StreamlitDuplicateElementId`가 발생하는 문제를 해결하기 위함.
+  - 결과 Top3 카드의 빈 상세 문구를 카드 내 짧은 라벨과 맞추기 위함.
+- 변경 내용:
+  - 스텝 내비게이션 `이전`, `다음` 버튼에 `diagnosis_prev_button_{step_index}`, `diagnosis_next_button_{step_index}` key 추가.
+  - 결과 화면 하단 `자가진단 다시 시작` 버튼에 `result_restart_button` key 추가.
+  - `reset_diagnosis_state()`를 추가해 테마/챗봇 상태는 유지하고 자가진단 입력값과 결과 캐시만 초기화.
+  - 추천 카드의 빈 상세 문구를 `추가로 표시할 세부 근거가 없습니다.`에서 `세부 근거 없음`으로 축약.
+- 역할:
+  - Streamlit 자동 ID 충돌 방지.
+  - 결과 카드의 상세 영역 문구 길이와 시각적 균형 개선.
+- 검증:
+  - `python -m py_compile Frontend/views/diagnosis_steps.py Frontend/views/diagnosis_result.py Frontend/components/ui.py` 통과.
+
+#### 15. 서비스 표시명 최종 변경
+
+- 파일:
+  - `Frontend/components/ui.py`
+  - `Frontend/FRONTEND_ARCHITECTURE_FINAL.md`
+- 목적:
+  - 발표 및 PR 기준 서비스명을 `청약 랭그래프 시스템`으로 통일하기 위함.
+- 변경 내용:
+  - Streamlit `page_title`을 `청약 랭그래프 시스템`으로 변경.
+  - 상단 헤더, 사이드바 타이틀, 결과 화면 kicker의 서비스명을 `청약 랭그래프 시스템`으로 변경.
+  - 페이지 아이콘을 `청`으로 변경.
+  - 프론트 구조 설명 문서에 현재 서비스 표시명을 명시.
+- 역할:
+  - 화면과 공유 문서에서 서비스명을 동일하게 보여줌.
+- 검증:
+  - `python -m py_compile Frontend/components/ui.py Frontend/views/diagnosis_steps.py Frontend/views/diagnosis_result.py Frontend/views/chatbot_panel.py Frontend/state/diagnosis_state.py` 통과.
+
 ## 앞으로 기록할 항목
 
 새 변경이 생기면 아래 형식으로 누적한다.

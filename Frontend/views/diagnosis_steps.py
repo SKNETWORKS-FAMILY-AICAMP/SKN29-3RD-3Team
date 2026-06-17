@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from html import escape
 
 import streamlit as st
 
@@ -25,6 +26,7 @@ from state.diagnosis_state import (
     build_form_from_state,
     detail_widget_key,
     persist_widget,
+    reset_diagnosis_state,
     widget_key,
 )
 from views.diagnosis_result import run_diagnosis
@@ -147,7 +149,6 @@ def render_housing_step() -> None:
     card_choice("세대주 여부", "is_household_head", YES_NO_OPTIONS, columns=2)
     st.number_input(
         "세대 구성원 수",
-        min_value=1,
         step=1,
         key=widget_key("num_household_members", 1),
         on_change=persist_widget,
@@ -245,7 +246,7 @@ def render_optional_step() -> None:
         args=("dual_income_status",),
     )
     if st.session_state.get("dual_income_status") is None:
-        st.error("맞벌이 여부는 소득 기준 판단에 필요합니다.")
+        st.caption("소득 기준 판단을 위해 맞벌이 여부를 선택해 주세요.")
 
     card_choice(
         "주택 구입/소유 이력",
@@ -254,7 +255,7 @@ def render_optional_step() -> None:
         columns=2,
     )
     if st.session_state.get("has_property_history") is None:
-        st.error("생애최초 판단을 위해 주택 구입/소유 이력을 선택하세요.")
+        st.caption("생애최초 판단을 위해 주택 구입/소유 이력을 선택해 주세요.")
 
     st.number_input(
         "총자산",
@@ -293,7 +294,7 @@ def render_announcement_step() -> None:
             args=("announcement_text",),
         )
         if not str(st.session_state.get("announcement_text") or "").strip():
-            st.warning("상세 시뮬레이션을 선택하셨습니다. 공고 정보를 입력해야 다음 단계로 진행할 수 있습니다.")
+            st.caption("상세 시뮬레이션을 선택했다면 공고 정보를 입력해야 다음 단계로 진행할 수 있습니다.")
     elif wants_detailed is False:
         st.session_state["announcement_text"] = ""
         st.caption("기본 리포트로 진행합니다. 공고 정보 입력은 건너뜁니다.")
@@ -303,23 +304,71 @@ def render_announcement_step() -> None:
 
 def render_navigation(step_index: int) -> None:
     st.divider()
+    step_key, _ = STEPS[step_index]
+    form = build_form_from_state()
+    errors = validate_step(step_key, form, build_detail_payload())
+    validation_key = f"validation_errors_{step_key}"
+    if validation_key in st.session_state:
+        if errors:
+            st.session_state[validation_key] = errors
+        else:
+            st.session_state.pop(validation_key, None)
+
     col_prev, col_next = st.columns([1, 1])
     with col_prev:
-        if st.button("이전", disabled=step_index == 0, use_container_width=True):
+        if st.button(
+            "이전",
+            key=f"diagnosis_prev_button_{step_index}",
+            disabled=step_index == 0,
+            use_container_width=True,
+        ):
             st.session_state["diagnosis_step"] = max(step_index - 1, 0)
             st.rerun()
 
     with col_next:
         if step_index >= len(STEPS) - 1:
+            if st.button(
+                "자가진단 다시 시작",
+                key="result_restart_button",
+                type="primary",
+                use_container_width=True,
+            ):
+                reset_diagnosis_state()
+                st.rerun()
             return
-        step_key, _ = STEPS[step_index]
-        form = build_form_from_state()
-        errors = validate_step(step_key, form, build_detail_payload())
-        if errors:
-            for error in errors:
-                st.error(error)
-        if st.button("다음", disabled=bool(errors), type="primary", use_container_width=True):
+        if st.button(
+            "다음",
+            key=f"diagnosis_next_button_{step_index}",
+            type="primary",
+            use_container_width=True,
+        ):
+            if errors:
+                st.session_state[validation_key] = errors
+                st.rerun()
+                return
+            st.session_state.pop(validation_key, None)
             if step_key == "announcement":
                 run_diagnosis(form)
             st.session_state["diagnosis_step"] = min(step_index + 1, len(STEPS) - 1)
             st.rerun()
+
+    _render_validation_summary(st.session_state.get(validation_key, []))
+
+
+def _render_validation_summary(errors: list[str]) -> None:
+    """필수 입력 오류를 여러 경고 박스 대신 한 번에 요약해서 보여준다."""
+    if not errors:
+        return
+
+    summary = " · ".join(errors[:4])
+    if len(errors) > 4:
+        summary += f" 외 {len(errors) - 4}개"
+    st.markdown(
+        f"""
+        <div class="cy-validation-summary">
+          <strong>아직 {len(errors)}개 항목이 남아 있어요</strong>
+          <span>{escape(summary)}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )

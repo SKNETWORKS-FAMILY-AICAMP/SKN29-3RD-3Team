@@ -14,23 +14,436 @@ from services.api_client import check_api_connection
 CHATBOT_PAGE = "pages/2_FAQ_챗봇.py"
 DIAGNOSIS_PAGE = "pages/1_청약_자가진단.py"
 HOME_PAGE = "streamlit_app.py"
+THEME_OPTIONS = ["라이트", "다크"]
+
+
+@st.cache_resource(show_spinner=False)
+def _theme_store() -> dict[str, str]:
+    """Streamlit multipage 간에도 유지되는 발표용 테마 저장소."""
+    return {"mode": "라이트"}
+
+
+def _current_theme_mode() -> str:
+    """페이지 이동 후에도 유지되도록 cache/session/query param의 테마 값을 동기화한다."""
+    store = _theme_store()
+    query_theme = st.query_params.get("theme")
+    if query_theme in THEME_OPTIONS:
+        st.session_state["theme_mode"] = query_theme
+        store["mode"] = query_theme
+
+    mode = st.session_state.get("theme_mode") or store.get("mode", "라이트")
+    if mode not in THEME_OPTIONS:
+        mode = "라이트"
+    st.session_state["theme_mode"] = mode
+    store["mode"] = mode
+    return mode
+
+
+def _sync_theme_query_param() -> None:
+    """테마 선택값을 URL에도 남겨 Streamlit multipage 이동 시 초기화를 줄인다."""
+    mode = st.session_state.get("theme_mode", "라이트")
+    if mode in THEME_OPTIONS:
+        _theme_store()["mode"] = mode
+        st.query_params["theme"] = mode
+
+
+def _theme_css() -> str:
+    """사이드바 테마 선택값에 맞춰 청약 랭그래프 시스템 색상 토큰을 만든다."""
+    mode = _current_theme_mode()
+    light_tokens = """
+        :root {
+            --cy-navy: #172033;
+            --cy-text: #172033;
+            --cy-text-soft: #344054;
+            --cy-subtext: #475467;
+            --cy-muted: #667085;
+            --cy-blue: #2558a8;
+            --cy-blue-hover: #1f4b91;
+            --cy-blue-strong: #12356f;
+            --cy-blue-soft: #eef4ff;
+            --cy-line: #d8e0ee;
+            --cy-line-soft: #edf1f7;
+            --cy-line-strong: #b8c4d8;
+            --cy-bg: #f6f8fb;
+            --cy-surface: #ffffff;
+            --cy-surface-soft: #fbfcff;
+            --cy-app-bg: linear-gradient(180deg, #ffffff 0%, #f7f9fc 62%, #f4f7fb 100%);
+            --cy-on-blue: #ffffff;
+            --cy-success-bg: #ecfdf3;
+            --cy-success-text: #067647;
+            --cy-success-line: #b7e4c7;
+            --cy-warn-bg: #fff8e6;
+            --cy-warn-text: #7a5200;
+            --cy-warn-line: #f5d58a;
+            --cy-danger-bg: #fff5f5;
+            --cy-danger-text: #b04444;
+            --cy-danger-strong: #8f2929;
+            --cy-danger-line: #f0c7c7;
+            --cy-shadow: 0 14px 34px rgba(24, 40, 72, .08);
+            --cy-shadow-soft: 0 8px 22px rgba(24, 40, 72, .05);
+            --cy-shadow-blue: 0 10px 22px rgba(37, 88, 168, .16);
+        }
+    """
+    dark_tokens = """
+        :root {
+            --cy-navy: #f8fafc;
+            --cy-text: #f8fafc;
+            --cy-text-soft: #e2e8f5;
+            --cy-subtext: #c4cde0;
+            --cy-muted: #a8b4ca;
+            --cy-blue: #8fb3ff;
+            --cy-blue-hover: #aac6ff;
+            --cy-blue-strong: #cfe2ff;
+            --cy-blue-soft: #1b335d;
+            --cy-line: #4c5d79;
+            --cy-line-soft: #33425d;
+            --cy-line-strong: #70819f;
+            --cy-bg: #0f172a;
+            --cy-surface: #1a2438;
+            --cy-surface-soft: #141f33;
+            --cy-app-bg: linear-gradient(180deg, #0c1424 0%, #101827 58%, #111827 100%);
+            --cy-on-blue: #f8fafc;
+            --cy-success-bg: #0f2f24;
+            --cy-success-text: #8ee6b0;
+            --cy-success-line: #245b43;
+            --cy-warn-bg: #2a2414;
+            --cy-warn-text: #ffd783;
+            --cy-warn-line: #624c1a;
+            --cy-danger-bg: #321b1b;
+            --cy-danger-text: #ffaaa5;
+            --cy-danger-strong: #ffc2bd;
+            --cy-danger-line: #6f3331;
+            --cy-shadow: 0 16px 36px rgba(0, 0, 0, .34);
+            --cy-shadow-soft: 0 10px 24px rgba(0, 0, 0, .24);
+            --cy-shadow-blue: 0 10px 24px rgba(110, 168, 255, .18);
+        }
+    """
+    dark_overrides = """
+        .cy-brand-logo-slot,
+        .cy-home-proof span,
+        .cy-preview,
+        .cy-feature,
+        .cy-result-hero,
+        .cy-status-chip,
+        .cy-next-actions,
+        .cy-guide,
+        .cy-step,
+        .cy-source-chip,
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            border-color: var(--cy-line-strong) !important;
+            background: var(--cy-surface) !important;
+            color: var(--cy-text-soft) !important;
+            box-shadow: inset 0 0 0 1px rgba(126, 166, 247, .08), var(--cy-shadow-soft) !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"] > div,
+        div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"] {
+            background: transparent !important;
+        }
+        .cy-preview-note,
+        .cy-status-chip.warn {
+            border-color: var(--cy-warn-line) !important;
+            background: var(--cy-warn-bg) !important;
+            color: var(--cy-warn-text) !important;
+        }
+        .cy-preview-tag,
+        .cy-status-chip.good {
+            border-color: var(--cy-success-line) !important;
+            background: var(--cy-success-bg) !important;
+            color: var(--cy-success-text) !important;
+        }
+        .cy-kicker,
+        .cy-badge,
+        .cy-step-active {
+            border-color: var(--cy-blue) !important;
+            background: var(--cy-blue-soft) !important;
+            color: var(--cy-blue-strong) !important;
+        }
+        .cy-preview-title,
+        .cy-preview-row strong,
+        .cy-feature strong,
+        .cy-result-hero h2,
+        .cy-next-actions strong,
+        .cy-guide strong,
+        .cy-hero-text h1,
+        .cy-home h2 {
+            color: var(--cy-text) !important;
+        }
+        .cy-home p,
+        .cy-hero-text p,
+        .cy-preview-row,
+        .cy-result-hero p,
+        .cy-next-actions ol,
+        .cy-feature span {
+            color: var(--cy-subtext) !important;
+        }
+        .cy-preview-value,
+        .cy-result-kicker {
+            color: var(--cy-blue) !important;
+        }
+        .cy-brand-logo-slot::after {
+            background: var(--cy-blue) !important;
+        }
+        .cy-validation-summary {
+            border-color: var(--cy-danger-line) !important;
+            background: var(--cy-danger-bg) !important;
+            color: var(--cy-danger-text) !important;
+        }
+        .cy-validation-summary strong {
+            color: var(--cy-danger-strong) !important;
+        }
+        div.stButton > button[kind="primary"] {
+            border-color: var(--cy-blue) !important;
+            background: var(--cy-blue) !important;
+            color: var(--cy-on-blue) !important;
+        }
+        div.stButton > button[kind="primary"] *,
+        button[kind="primary"] *,
+        button[data-testid="stBaseButton-primary"] * {
+            color: var(--cy-on-blue) !important;
+        }
+        div.stButton > button[kind="primary"]:hover {
+            border-color: var(--cy-blue-hover) !important;
+            background: var(--cy-blue-hover) !important;
+        }
+        button[kind="secondaryFormSubmit"],
+        button[data-testid="stBaseButton-secondaryFormSubmit"] {
+            border-color: var(--cy-blue) !important;
+            background: var(--cy-blue) !important;
+            color: var(--cy-on-blue) !important;
+        }
+        button[kind="secondaryFormSubmit"] *,
+        button[data-testid="stBaseButton-secondaryFormSubmit"] * {
+            color: var(--cy-on-blue) !important;
+        }
+        div.stButton > button:not([kind="primary"]),
+        div[data-testid="stButton"] button:not([kind="primary"]),
+        button[kind="secondary"] {
+            border-color: var(--cy-line) !important;
+            background: #172238 !important;
+            color: var(--cy-text-soft) !important;
+        }
+        div.stButton > button:not([kind="primary"]) *,
+        div[data-testid="stButton"] button:not([kind="primary"]) *,
+        button[kind="secondary"] * {
+            color: var(--cy-text-soft) !important;
+        }
+        div.stButton > button:disabled,
+        div[data-testid="stButton"] button:disabled,
+        button:disabled {
+            border-color: var(--cy-line-soft) !important;
+            background: #151f32 !important;
+            color: #9ca8bf !important;
+            opacity: 1 !important;
+        }
+        header[data-testid="stHeader"],
+        div[data-testid="stToolbar"],
+        div[data-testid="stDecoration"] {
+            background: transparent !important;
+        }
+        section[data-testid="stSidebar"],
+        section[data-testid="stSidebar"] > div,
+        div[data-testid="stTextInput"] input,
+        div[data-testid="stNumberInput"] input,
+        div[data-testid="stDateInput"] input,
+        div[data-baseweb="select"] > div,
+        div[data-baseweb="input"] > div,
+        textarea {
+            background-color: var(--cy-surface-soft) !important;
+            color: var(--cy-text) !important;
+            border-color: var(--cy-line) !important;
+        }
+        input::placeholder,
+        textarea::placeholder,
+        div[data-baseweb="select"] input::placeholder,
+        div[data-baseweb="select"] input,
+        div[data-baseweb="select"] > div,
+        div[data-baseweb="select"] > div *,
+        div[data-baseweb="select"] [role="combobox"],
+        div[data-baseweb="select"] [aria-readonly="true"],
+        div[data-baseweb="select"] [class*="placeholder"],
+        div[data-baseweb="select"] [aria-disabled="true"],
+        div[data-baseweb="select"] div[disabled],
+        [data-baseweb="select"] [data-testid="stMarkdownContainer"],
+        [data-baseweb="select"] span {
+            color: #e5efff !important;
+            -webkit-text-fill-color: #e5efff !important;
+            opacity: 1 !important;
+        }
+        div[data-baseweb="select"] > div {
+            background-color: #172238 !important;
+            border-color: #70819f !important;
+        }
+        div[data-testid="stNumberInput"] button,
+        div[data-testid="stNumberInput"] [role="button"],
+        div[data-testid="stNumberInput"] button *,
+        div[data-testid="stNumberInput"] [role="button"] * {
+            background: #1b263a !important;
+            color: #e6edf8 !important;
+            fill: #e6edf8 !important;
+            stroke: #e6edf8 !important;
+            border-color: var(--cy-line) !important;
+        }
+        div[data-testid="stNumberInput"] button:disabled,
+        div[data-testid="stNumberInput"] [aria-disabled="true"],
+        div[data-testid="stNumberInput"] button:disabled *,
+        div[data-testid="stNumberInput"] [aria-disabled="true"] * {
+            color: #a6b3ca !important;
+            fill: #a6b3ca !important;
+            stroke: #a6b3ca !important;
+            background: #151f32 !important;
+        }
+        div[data-baseweb="popover"],
+        div[data-baseweb="popover"] > div,
+        ul[role="listbox"],
+        li[role="option"] {
+            border-color: var(--cy-line) !important;
+            background: var(--cy-surface) !important;
+            color: var(--cy-text) !important;
+        }
+        li[role="option"]:hover,
+        li[aria-selected="true"],
+        div[role="option"]:hover,
+        div[aria-selected="true"] {
+            background: var(--cy-blue-soft) !important;
+            color: var(--cy-blue-strong) !important;
+        }
+        div[data-baseweb="select"] svg,
+        div[data-baseweb="input"] svg {
+            color: var(--cy-muted) !important;
+            fill: var(--cy-muted) !important;
+        }
+        div[data-testid="stExpander"],
+        div[data-testid="stExpander"] details,
+        div[data-testid="stExpander"] summary,
+        div[data-testid="stExpanderDetails"],
+        details,
+        summary {
+            border-color: var(--cy-line) !important;
+            background: var(--cy-surface) !important;
+            color: var(--cy-text-soft) !important;
+        }
+        pre,
+        code,
+        div[data-testid="stJson"],
+        div[data-testid="stJson"] pre,
+        div[data-testid="stCodeBlock"],
+        div[data-testid="stCodeBlock"] pre {
+            border-color: var(--cy-line) !important;
+            background: #0c1424 !important;
+            color: #dbe7ff !important;
+        }
+        div[data-testid="stChatMessage"] {
+            border: 1px solid var(--cy-line) !important;
+            border-radius: 8px !important;
+            background: var(--cy-surface) !important;
+            color: var(--cy-text-soft) !important;
+        }
+        div[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"],
+        div[data-testid="stChatMessage"] p,
+        div[data-testid="stChatMessage"] li {
+            color: var(--cy-text-soft) !important;
+        }
+        div[data-testid="stChatMessage"] h1,
+        div[data-testid="stChatMessage"] h2,
+        div[data-testid="stChatMessage"] h3,
+        div[data-testid="stChatMessage"] h4,
+        div[data-testid="stChatMessage"] strong {
+            color: var(--cy-text) !important;
+        }
+        div[data-testid="stChatInput"],
+        div[data-testid="stChatInput"] textarea,
+        div[data-testid="stChatInput"] input {
+            background: var(--cy-surface-soft) !important;
+            color: var(--cy-text) !important;
+            border-color: var(--cy-line) !important;
+        }
+        div[data-testid="stChatInput"] button {
+            background: var(--cy-blue) !important;
+            color: var(--cy-on-blue) !important;
+            border-color: var(--cy-blue) !important;
+        }
+        .cy-theme-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .25rem;
+            border: 1px solid var(--cy-line);
+            border-radius: 8px;
+            padding: .22rem;
+            background: #10192b;
+        }
+        .cy-theme-option {
+            display: block;
+            text-align: center;
+            border-radius: 6px;
+            padding: .42rem .5rem;
+            color: var(--cy-text-soft) !important;
+            text-decoration: none !important;
+            font-weight: 750;
+            line-height: 1.2;
+        }
+        .cy-theme-option.active {
+            background: var(--cy-blue);
+            color: var(--cy-on-blue) !important;
+            box-shadow: var(--cy-shadow-blue);
+        }
+        div[data-testid="stChatMessage"] > div:first-child {
+            background: transparent !important;
+        }
+        div[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]),
+        div[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
+            background: var(--cy-surface) !important;
+        }
+        div[data-testid="stChatMessage"] [data-testid="chatAvatarIcon-user"] {
+            background: #e95555 !important;
+            color: #ffffff !important;
+        }
+        div[data-testid="stChatMessage"] [data-testid="chatAvatarIcon-assistant"] {
+            background: #f2a93b !important;
+            color: #ffffff !important;
+        }
+        label,
+        label p,
+        [data-testid="stWidgetLabel"],
+        [data-testid="stWidgetLabel"] p,
+        [data-testid="stCaptionContainer"],
+        [data-testid="stCaptionContainer"] p {
+            color: var(--cy-subtext) !important;
+        }
+        [data-testid="stMarkdownContainer"] p,
+        [data-testid="stMarkdownContainer"] li {
+            color: var(--cy-text-soft) !important;
+        }
+        h1, h2, h3, h4, h5, h6,
+        [data-testid="stMarkdownContainer"] strong {
+            color: var(--cy-text) !important;
+        }
+        section[data-testid="stSidebar"] a,
+        section[data-testid="stSidebar"] p,
+        section[data-testid="stSidebar"] span,
+        section[data-testid="stSidebar"] label,
+        section[data-testid="stSidebar"] div {
+            color: var(--cy-subtext) !important;
+        }
+        section[data-testid="stSidebar"] h1,
+        section[data-testid="stSidebar"] h2,
+        section[data-testid="stSidebar"] h3 {
+            color: var(--cy-text) !important;
+        }
+    """
+    if mode == "다크":
+        return dark_tokens + dark_overrides
+    return light_tokens
 
 
 def set_page_style() -> None:
-    st.set_page_config(page_title="내집각", page_icon="내", layout="wide")
+    st.set_page_config(page_title="청약 랭그래프 시스템", page_icon="청", layout="wide")
     st.markdown(
-        """
-        <style>
-        :root {
-            --cy-navy: #172033;
-            --cy-blue: #2558a8;
-            --cy-blue-soft: #eef4ff;
-            --cy-line: #d8e0ee;
-            --cy-muted: #667085;
-            --cy-bg: #f6f8fb;
-        }
+        "<style>\n"
+        + _theme_css()
+        + """
         .stApp {
-            background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 62%, #f4f7fb 100%);
+            background: var(--cy-app-bg);
+            color: var(--cy-text);
         }
         .block-container {
             max-width: 1120px;
@@ -296,6 +709,77 @@ def set_page_style() -> None:
         .cy-result-card-title {
             min-height: 2.5rem;
         }
+        .cy-rank-card {
+            display: flex;
+            flex-direction: column;
+            min-height: 17.2rem;
+            border: 1px solid var(--cy-line);
+            border-radius: 8px;
+            padding: 1.05rem;
+            background: var(--cy-surface);
+            box-shadow: var(--cy-shadow-soft);
+        }
+        .cy-rank-meta {
+            color: var(--cy-muted);
+            font-size: .9rem;
+            font-weight: 750;
+            margin-bottom: .65rem;
+        }
+        .cy-rank-card h4 {
+            min-height: 2.5rem;
+            margin: 0 0 .65rem;
+            color: var(--cy-text);
+            font-size: 1.25rem;
+            line-height: 1.35;
+        }
+        .cy-rank-score {
+            margin: .75rem 0 .45rem;
+            color: var(--cy-text);
+            font-weight: 850;
+        }
+        .cy-rank-reason {
+            min-height: 3.2rem;
+            color: var(--cy-subtext);
+            line-height: 1.55;
+            margin: .2rem 0 .75rem;
+        }
+        .cy-rank-details {
+            margin-top: auto;
+            border: 1px solid var(--cy-line);
+            border-radius: 8px;
+            background: var(--cy-surface-soft);
+            color: var(--cy-text-soft);
+            overflow: hidden;
+        }
+        .cy-rank-details summary {
+            cursor: pointer;
+            list-style: none;
+            padding: .78rem .9rem;
+            font-weight: 800;
+        }
+        .cy-rank-details summary::-webkit-details-marker {
+            display: none;
+        }
+        .cy-rank-details summary::before {
+            content: "›";
+            display: inline-block;
+            margin-right: .55rem;
+            color: var(--cy-blue);
+            font-weight: 900;
+        }
+        .cy-rank-details[open] summary::before {
+            transform: rotate(90deg);
+        }
+        .cy-rank-detail-body {
+            border-top: 1px solid var(--cy-line);
+            padding: .78rem .9rem .88rem;
+            color: var(--cy-subtext);
+            line-height: 1.6;
+        }
+        .cy-rank-detail-body ul {
+            margin: 0;
+            padding-left: 1.05rem;
+        }
         .cy-badge {
             display: inline-flex;
             align-items: center;
@@ -387,6 +871,73 @@ def set_page_style() -> None:
         section[data-testid="stSidebar"] div[data-testid="stSidebarNav"] {
             display: none !important;
         }
+        .cy-source-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .45rem;
+            padding-top: .15rem;
+        }
+        .cy-source-chip {
+            display: inline-flex;
+            align-items: center;
+            max-width: 100%;
+            border: 1px solid #d8e0ee;
+            border-radius: 999px;
+            padding: .28rem .62rem;
+            background: #ffffff;
+            color: #475467;
+            font-size: .82rem;
+            line-height: 1.35;
+            word-break: keep-all;
+        }
+        .cy-validation-summary {
+            margin-top: .75rem;
+            border: 1px solid #f0c7c7;
+            border-radius: 8px;
+            background: #fff5f5;
+            color: #9f2f2f;
+            padding: .78rem .9rem;
+            line-height: 1.5;
+        }
+        .cy-validation-summary strong {
+            display: block;
+            margin-bottom: .18rem;
+            color: #8f2929;
+            font-weight: 800;
+        }
+        .cy-validation-summary span {
+            color: #b04444;
+            font-size: .93rem;
+        }
+        .cy-theme-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .25rem;
+            border: 1px solid var(--cy-line);
+            border-radius: 8px;
+            padding: .22rem;
+            background: var(--cy-surface-soft);
+        }
+        .cy-theme-option {
+            display: block;
+            text-align: center;
+            border-radius: 6px;
+            padding: .42rem .5rem;
+            color: var(--cy-text-soft);
+            text-decoration: none;
+            font-weight: 750;
+            line-height: 1.2;
+        }
+        .cy-theme-option:hover {
+            background: var(--cy-blue-soft);
+            color: var(--cy-blue-strong);
+            text-decoration: none;
+        }
+        .cy-theme-option.active {
+            background: var(--cy-blue);
+            color: var(--cy-on-blue);
+            box-shadow: var(--cy-shadow-blue);
+        }
         @media (max-width: 760px) {
             .cy-home-grid {
                 grid-template-columns: 1fr;
@@ -411,7 +962,7 @@ def render_app_header() -> None:
         <div class="cy-hero-text">
         <div class="cy-brand">
           <span class="cy-brand-logo-slot" aria-label="로고 자리"></span>
-          <h1>내집각</h1>
+          <h1>청약 랭그래프 시스템</h1>
         </div>
         <p>내 조건을 입력하면 가능한 공급 유형과 추가 확인이 필요한 항목을 한 화면에서 확인할 수 있어요.</p>
         </div>
@@ -494,13 +1045,49 @@ def render_home_screen() -> None:
 
 def render_sidebar(active_page: str) -> None:
     with st.sidebar:
-        st.markdown("### 내집각")
+        st.markdown("### 청약 랭그래프 시스템")
+        render_theme_selector()
+        st.divider()
         st.caption("모드 전환")
         _sidebar_page_link(HOME_PAGE, "처음 화면", active=active_page == "home")
         _sidebar_page_link(DIAGNOSIS_PAGE, "자가진단", active=active_page == "diagnosis")
         _sidebar_page_link(CHATBOT_PAGE, "FAQ 챗봇", active=active_page == "chatbot")
         st.divider()
         render_api_connection_status()
+
+
+def render_theme_selector() -> None:
+    """발표 중 빠르게 확인할 수 있는 서비스 자체 테마 선택 컨트롤."""
+    current_mode = _current_theme_mode()
+    st.caption("화면 테마")
+    light_col, dark_col = st.columns(2, gap="small")
+    with light_col:
+        if st.button(
+            "라이트",
+            key="theme_light_button",
+            type="primary" if current_mode == "라이트" else "secondary",
+            use_container_width=True,
+        ):
+            _set_theme_mode("라이트")
+            st.rerun()
+    with dark_col:
+        if st.button(
+            "다크",
+            key="theme_dark_button",
+            type="primary" if current_mode == "다크" else "secondary",
+            use_container_width=True,
+        ):
+            _set_theme_mode("다크")
+            st.rerun()
+
+
+def _set_theme_mode(mode: str) -> None:
+    """테마 선택 버튼에서 호출하는 단일 진입점."""
+    if mode not in THEME_OPTIONS:
+        mode = "라이트"
+    st.session_state["theme_mode"] = mode
+    _theme_store()["mode"] = mode
+    st.query_params["theme"] = mode
 
 
 def render_api_connection_status() -> None:
@@ -629,7 +1216,7 @@ def render_result(response: dict) -> None:
     st.markdown(
         f"""
         <section class="cy-result-hero">
-          <div class="cy-result-kicker">내집각 진단 결과</div>
+          <div class="cy-result-kicker">청약 랭그래프 시스템 진단 결과</div>
           <h2>{escape(title)}</h2>
           <p>{escape(summary)}</p>
           <div class="cy-status-row">
@@ -658,28 +1245,7 @@ def render_result(response: dict) -> None:
         rank_columns = st.columns(min(3, len(supply_rank)))
         for index, item in enumerate(supply_rank):
             with rank_columns[index]:
-                with st.container(border=True):
-                    st.caption(f"{item.get('rank', index + 1)}순위")
-                    st.markdown(
-                        f"<div class='cy-result-card-title'><h4>{escape(str(item.get('type', '공급 유형')))}</h4></div>",
-                        unsafe_allow_html=True,
-                    )
-                    method = item.get("method") or "기준 확인"
-                    competitiveness = item.get("competitiveness")
-                    badge_html = f"<span class='cy-badge'>{escape(str(method))}</span>"
-                    if competitiveness:
-                        badge_html += f"<span class='cy-badge'>{escape(str(competitiveness))}</span>"
-                    st.markdown(badge_html, unsafe_allow_html=True)
-                    score = item.get("score")
-                    max_score = item.get("max_score")
-                    if score is None or max_score is None:
-                        st.markdown("<p class='cy-muted'>점수 산정 없음</p>", unsafe_allow_html=True)
-                    else:
-                        ratio = item.get("ratio")
-                        st.markdown(f"**{score}/{max_score}점**" + (f" · {ratio}" if ratio else ""))
-                    if item.get("reason"):
-                        st.write(item["reason"])
-                    _render_score_breakdown_in_card(item)
+                st.markdown(_rank_card_html(item, index), unsafe_allow_html=True)
 
     for warning in response.get("warnings", []):
         st.warning(warning)
@@ -740,9 +1306,68 @@ def _render_score_breakdown_in_card(item: dict[str, Any]) -> None:
                 label = RESULT_SCORE_LABELS.get(key, key)
                 st.markdown(f"- {label}: {value}점")
     if missing_items:
-        with st.expander("확인 필요"):
+        with st.expander("조건 미달 가능 항목"):
             for missing in missing_items:
                 st.markdown(f"- {missing}")
+
+
+def _rank_card_html(item: dict[str, Any], index: int) -> str:
+    """추천 Top3 카드를 라이트/다크에서 같은 높이로 렌더링한다."""
+    rank = escape(str(item.get("rank", index + 1)))
+    supply_type = escape(str(item.get("type", "공급 유형")))
+    method = escape(str(item.get("method") or "기준 확인"))
+    competitiveness = item.get("competitiveness")
+    badges = f"<span class='cy-badge'>{method}</span>"
+    if competitiveness:
+        badges += f"<span class='cy-badge'>{escape(str(competitiveness))}</span>"
+
+    score = item.get("score")
+    max_score = item.get("max_score")
+    if score is None or max_score is None:
+        score_text = "별도 점수 산정 없음"
+    else:
+        ratio = item.get("ratio")
+        score_text = f"{escape(str(score))}/{escape(str(max_score))}점" + (
+            f" · {escape(str(ratio))}" if ratio else ""
+        )
+
+    reason = escape(str(item.get("reason") or "공급유형별 세부 기준을 확인해 주세요."))
+    details = _rank_detail_html(item)
+    return f"""
+    <article class="cy-rank-card">
+      <div class="cy-rank-meta">{rank}순위</div>
+      <h4>{supply_type}</h4>
+      <div>{badges}</div>
+      <div class="cy-rank-score">{score_text}</div>
+      <div class="cy-rank-reason">{reason}</div>
+      {details}
+    </article>
+    """
+
+
+def _rank_detail_html(item: dict[str, Any]) -> str:
+    breakdown = item.get("score_breakdown") or {}
+    missing_items = item.get("missing_items") or []
+    detail_items: list[str] = []
+
+    for key, value in breakdown.items():
+        label = RESULT_SCORE_LABELS.get(key, key)
+        detail_items.append(f"<li>{escape(str(label))}: {escape(str(value))}점</li>")
+    for missing in missing_items:
+        detail_items.append(f"<li>{escape(str(missing))}</li>")
+
+    if not detail_items:
+        return '<div class="cy-rank-details"><div class="cy-rank-detail-body">세부 근거 없음</div></div>'
+
+    summary = "점수 근거" if breakdown else "조건 미달 가능 항목"
+    if breakdown and missing_items:
+        summary = "점수 근거와 미달 가능 항목"
+    return f"""
+    <details class="cy-rank-details">
+      <summary>{summary}</summary>
+      <div class="cy-rank-detail-body"><ul>{''.join(detail_items)}</ul></div>
+    </details>
+    """
 
 
 def _result_summary(response: dict[str, Any], report: dict[str, Any], node5: dict[str, Any]) -> str:

@@ -37,10 +37,6 @@ def render_result_step() -> None:
     if "last_diagnosis_response" not in st.session_state:
         run_diagnosis(form)
 
-    if st.button("자가진단 다시 실행", use_container_width=True):
-        run_diagnosis(form)
-        st.rerun()
-
     response = st.session_state["last_diagnosis_response"]
     render_result(response)
     render_langgraph_result(response)
