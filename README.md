@@ -21,40 +21,7 @@
 
 <br/>
 
-<table width="100%">
-  <tr>
-    <td width="25%" align="center">
-      <img src="https://img.shields.io/badge/STEP%2001-Profile-1D4ED8?style=flat-square" /><br/>
-      <b>Profile Diagnosis</b><br/>
-      <sub>사용자 조건 기반 자격 진단</sub>
-    </td>
-    <td width="25%" align="center">
-      <img src="https://img.shields.io/badge/STEP%2002-Ranking-0F766E?style=flat-square" /><br/>
-      <b>Supply Ranking</b><br/>
-      <sub>특별공급/일반공급 우선순위 산출</sub>
-    </td>
-    <td width="25%" align="center">
-      <img src="https://img.shields.io/badge/STEP%2003-Grounding-B45309?style=flat-square" /><br/>
-      <b>RAG Grounding</b><br/>
-      <sub>공식 문서 기반 근거 검색</sub>
-    </td>
-    <td width="25%" align="center">
-      <img src="https://img.shields.io/badge/STEP%2004-Report-334155?style=flat-square" /><br/>
-      <b>Strategy Report</b><br/>
-      <sub>공고문과 자금 조건을 반영한 전략 리포트</sub>
-    </td>
-  </tr>
-</table>
-
-<table width="100%">
-  <tr>
-    <td align="center" width="20%"><img src="https://img.shields.io/badge/Trust%20Blue-1D4ED8-1D4ED8?style=for-the-badge&labelColor=1D4ED8" /><br/><code>#1D4ED8</code></td>
-    <td align="center" width="20%"><img src="https://img.shields.io/badge/Housing%20Teal-0F766E-0F766E?style=for-the-badge&labelColor=0F766E" /><br/><code>#0F766E</code></td>
-    <td align="center" width="20%"><img src="https://img.shields.io/badge/Document%20Amber-B45309-B45309?style=for-the-badge&labelColor=B45309" /><br/><code>#B45309</code></td>
-    <td align="center" width="20%"><img src="https://img.shields.io/badge/System%20Slate-334155-334155?style=for-the-badge&labelColor=334155" /><br/><code>#334155</code></td>
-    <td align="center" width="20%"><img src="https://img.shields.io/badge/Soft%20Base-F8FAFC-E2E8F0?style=for-the-badge&labelColor=F8FAFC" /><br/><code>#F8FAFC</code></td>
-  </tr>
-</table>
+<img src="./docs/assets/readme/service-strip.svg" width="100%" />
 
 ---
 
