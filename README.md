@@ -1,6 +1,9 @@
-# 청약 전략 추천 RAG 시스템
-
 <div align="center">
+
+<img src="./docs/assets/readme/hero.svg" width="100%" />
+
+<br/>
+<br/>
 
 ### 아파트 분양과 청약이 처음인 사용자를 위한 개인 맞춤형 청약 전략 서비스
 
@@ -18,20 +21,38 @@
 
 <br/>
 
-<table>
+<table width="100%">
   <tr>
-    <td width="33%" align="center">
+    <td width="25%" align="center">
+      <img src="https://img.shields.io/badge/STEP%2001-Profile-1D4ED8?style=flat-square" /><br/>
       <b>Profile Diagnosis</b><br/>
       <sub>사용자 조건 기반 자격 진단</sub>
     </td>
-    <td width="33%" align="center">
+    <td width="25%" align="center">
+      <img src="https://img.shields.io/badge/STEP%2002-Ranking-0F766E?style=flat-square" /><br/>
       <b>Supply Ranking</b><br/>
       <sub>특별공급/일반공급 우선순위 산출</sub>
     </td>
-    <td width="33%" align="center">
+    <td width="25%" align="center">
+      <img src="https://img.shields.io/badge/STEP%2003-Grounding-B45309?style=flat-square" /><br/>
+      <b>RAG Grounding</b><br/>
+      <sub>공식 문서 기반 근거 검색</sub>
+    </td>
+    <td width="25%" align="center">
+      <img src="https://img.shields.io/badge/STEP%2004-Report-334155?style=flat-square" /><br/>
       <b>Strategy Report</b><br/>
       <sub>공고문과 자금 조건을 반영한 전략 리포트</sub>
     </td>
+  </tr>
+</table>
+
+<table width="100%">
+  <tr>
+    <td align="center" width="20%"><img src="https://img.shields.io/badge/Trust%20Blue-1D4ED8-1D4ED8?style=for-the-badge&labelColor=1D4ED8" /><br/><code>#1D4ED8</code></td>
+    <td align="center" width="20%"><img src="https://img.shields.io/badge/Housing%20Teal-0F766E-0F766E?style=for-the-badge&labelColor=0F766E" /><br/><code>#0F766E</code></td>
+    <td align="center" width="20%"><img src="https://img.shields.io/badge/Document%20Amber-B45309-B45309?style=for-the-badge&labelColor=B45309" /><br/><code>#B45309</code></td>
+    <td align="center" width="20%"><img src="https://img.shields.io/badge/System%20Slate-334155-334155?style=for-the-badge&labelColor=334155" /><br/><code>#334155</code></td>
+    <td align="center" width="20%"><img src="https://img.shields.io/badge/Soft%20Base-F8FAFC-E2E8F0?style=for-the-badge&labelColor=F8FAFC" /><br/><code>#F8FAFC</code></td>
   </tr>
 </table>
 
@@ -114,6 +135,21 @@
 
 이 서비스는 **아파트 분양과 청약을 처음 접하는 사용자**를 주 타겟으로 합니다. 사용자의 기본 프로필을 바탕으로 신청 가능성이 있는 공급 유형을 진단하고, 공고문 조건과 RAG 기반 제도 설명을 결합해 개인별 전략 리포트를 제공합니다.
 
+<table width="100%">
+  <tr>
+    <td width="50%">
+      <img src="https://img.shields.io/badge/Target-청약%20초보자-1D4ED8?style=for-the-badge" /><br/>
+      <b>처음 청약을 준비하는 사용자</b><br/>
+      <sub>복잡한 공급 유형과 가점 조건을 스스로 해석하기 어려운 사용자를 기준으로 설계했습니다.</sub>
+    </td>
+    <td width="50%">
+      <img src="https://img.shields.io/badge/Principle-계산과%20추론%20분리-0F766E?style=for-the-badge" /><br/>
+      <b>정량 계산은 코드, 설명은 LLM</b><br/>
+      <sub>자격과 점수처럼 정답이 있는 영역은 규칙 기반 계산으로 고정합니다.</sub>
+    </td>
+  </tr>
+</table>
+
 | 서비스 관점 | 설계 내용 |
 |---|---|
 | 사용자 | 아파트 분양과 청약 신청을 처음 준비하는 사람 |
@@ -134,6 +170,16 @@
 
 ## 3. 핵심 기능
 
+<table width="100%">
+  <tr>
+    <td width="20%" align="center"><img src="https://img.shields.io/badge/자격-Profile-1D4ED8?style=flat-square" /><br/><b>신청 가능성</b></td>
+    <td width="20%" align="center"><img src="https://img.shields.io/badge/점수-Score-0F766E?style=flat-square" /><br/><b>가점/순위</b></td>
+    <td width="20%" align="center"><img src="https://img.shields.io/badge/근거-RAG-B45309?style=flat-square" /><br/><b>공식 문서</b></td>
+    <td width="20%" align="center"><img src="https://img.shields.io/badge/자금-Finance-334155?style=flat-square" /><br/><b>실투자금</b></td>
+    <td width="20%" align="center"><img src="https://img.shields.io/badge/전략-Report-475569?style=flat-square" /><br/><b>최종 제안</b></td>
+  </tr>
+</table>
+
 | 기능 | 사용자에게 보이는 가치 | 구현 방식 |
 |---|---|---|
 | 청약 자격 진단 | 내가 어떤 공급 유형을 검토할 수 있는지 확인 | 프로필 기반 규칙 판정 |
@@ -147,6 +193,16 @@
 ## 4. 전체 시스템 구조
 
 서비스는 **Frontend**, **Backend API**, **LangGraph Pipeline**, **Calculator**, **RAG Retriever**, **Vector DB**로 나뉩니다. 신뢰도가 중요한 청약 도메인이므로, LLM이 모든 것을 판단하지 않도록 역할을 분리했습니다.
+
+<table width="100%">
+  <tr>
+    <td align="center"><img src="https://img.shields.io/badge/Frontend-Streamlit-FF6B6B?style=flat-square" /></td>
+    <td align="center"><img src="https://img.shields.io/badge/API-FastAPI-0F766E?style=flat-square" /></td>
+    <td align="center"><img src="https://img.shields.io/badge/Pipeline-LangGraph-334155?style=flat-square" /></td>
+    <td align="center"><img src="https://img.shields.io/badge/Search-ChromaDB-1D4ED8?style=flat-square" /></td>
+    <td align="center"><img src="https://img.shields.io/badge/LLM-OpenAI-B45309?style=flat-square" /></td>
+  </tr>
+</table>
 
 ```mermaid
 flowchart LR
