@@ -61,27 +61,31 @@
 
 ### 1.1 팀원별 담당 영역
 
-<table>
+<table width="100%">
   <tr>
     <td align="center" width="25%">
-      <img src="./docs/assets/team/jun-eok.jpg" width="140" /><br/>
-      <b>준억</b><br/>
-      <sub>역할 작성 필요</sub>
+      <img src="./docs/assets/team/jun-eok.jpg" width="220" /><br/>
+      <h3>준억</h3>
+      <b>역할 작성 필요</b><br/>
+      <sub>담당 영역 작성 필요</sub>
     </td>
     <td align="center" width="25%">
-      <img src="./docs/assets/team/dong-yoon.jpg" width="140" /><br/>
-      <b>동윤</b><br/>
-      <sub>역할 작성 필요</sub>
+      <img src="./docs/assets/team/dong-yoon.jpg" width="220" /><br/>
+      <h3>동윤</h3>
+      <b>역할 작성 필요</b><br/>
+      <sub>담당 영역 작성 필요</sub>
     </td>
     <td align="center" width="25%">
-      <img src="./docs/assets/team/ji-hoon.jpg" width="140" /><br/>
-      <b>지훈</b><br/>
-      <sub>역할 작성 필요</sub>
+      <img src="./docs/assets/team/ji-hoon.jpg" width="220" /><br/>
+      <h3>지훈</h3>
+      <b>역할 작성 필요</b><br/>
+      <sub>담당 영역 작성 필요</sub>
     </td>
     <td align="center" width="25%">
-      <img src="./docs/assets/team/eun-jin.jpg" width="140" /><br/>
-      <b>은진</b><br/>
-      <sub>역할 작성 필요</sub>
+      <img src="./docs/assets/team/eun-jin.jpg" width="220" /><br/>
+      <h3>은진</h3>
+      <b>역할 작성 필요</b><br/>
+      <sub>담당 영역 작성 필요</sub>
     </td>
   </tr>
 </table>
