@@ -409,13 +409,46 @@ SKN29-3rd-3team/
 
 ## 12. 주요 화면 및 결과 예시
 
-| 구분 | 내용 | 이미지 |
-|---|---|---|
-| 메인 화면 | 작성 필요 | 작성 필요 |
-| 자격 진단 입력 | 작성 필요 | 작성 필요 |
-| 공급 순위 결과 | 작성 필요 | 작성 필요 |
-| 상세 전략 리포트 | 작성 필요 | 작성 필요 |
-| RAG 챗봇 답변 | 작성 필요 | 작성 필요 |
+서비스 흐름을 보여주는 대표 화면만 선별했습니다. 전체 입력 단계 이미지를 모두 넣기보다, **진입 → 입력 → 공고문 반영 → 추천 결과 → 상세 분석 → RAG 챗봇** 순서로 확인할 수 있게 구성했습니다.
+
+<table width="100%">
+  <tr>
+    <td width="50%" valign="top">
+      <b>서비스 첫 화면</b><br/>
+      <sub>청약 초보자가 바로 진단을 시작할 수 있는 진입 화면</sub><br/><br/>
+      <img src="./docs/assets/screenshots/home.png" width="100%" />
+    </td>
+    <td width="50%" valign="top">
+      <b>자가진단 입력 시작</b><br/>
+      <sub>청약통장 정보를 시작으로 단계형 입력 플로우 제공</sub><br/><br/>
+      <img src="./docs/assets/screenshots/diagnosis-bankbook.png" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <b>공고문 기반 상세 입력</b><br/>
+      <sub>관심 공고문 정보를 입력하면 공고 기준 상세 리포트로 확장</sub><br/><br/>
+      <img src="./docs/assets/screenshots/diagnosis-announcement.png" width="100%" />
+    </td>
+    <td width="50%" valign="top">
+      <b>추천 결과 요약</b><br/>
+      <sub>추천 Top 3, 공고 기준 반영 여부, 다음 행동을 한 화면에 제시</sub><br/><br/>
+      <img src="./docs/assets/screenshots/result-summary.png" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <b>공고 및 재무 분석</b><br/>
+      <sub>지역, 공급유형, 면적, 분양가, 대출 가능액, 실투자금, 자금 리스크 표시</sub><br/><br/>
+      <img src="./docs/assets/screenshots/result-finance.png" width="100%" />
+    </td>
+    <td width="50%" valign="top">
+      <b>FAQ 챗봇과 참고 자료</b><br/>
+      <sub>RAG 답변과 함께 참고한 공식 문서 출처를 칩 형태로 표시</sub><br/><br/>
+      <img src="./docs/assets/screenshots/faq-sources.png" width="100%" />
+    </td>
+  </tr>
+</table>
 
 ---
 
