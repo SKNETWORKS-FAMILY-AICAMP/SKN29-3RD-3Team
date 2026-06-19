@@ -1,8 +1,3 @@
-'''
-Chatbot 구현을 위한 langgraph 모델링
---> chat_CLI.py 로 실행
-'''
-
 import os
 from typing import Annotated, TypedDict, Literal
 import uuid
