@@ -452,19 +452,25 @@ python -m streamlit run frontend/streamlit_app.py
 ```text
 SKN29-3rd-3team/
 ├── backend/
-│   ├── app/                 # FastAPI router, service, schema
-│   ├── data/                # 원천/가공 데이터
-│   ├── docs/                # 청킹, API, 백엔드 설계 문서
-│   └── src/
-│       ├── engine/          # LangGraph node, tool, calculator
-│       ├── preprocessing/   # 문서 유형별 chunker
-│       └── rag/             # Retriever, chat graph
+│   ├── app/
+│   │   ├── routers/         # FastAPI endpoint
+│   │   ├── schemas/         # request/response schema
+│   │   └── services/        # API service layer
+│   ├── data/                # 원천 문서, FAQ JSON, 구조화 JSON
+│   ├── src/
+│   │   ├── engine/          # LangGraph node, tool, calculator
+│   │   ├── preprocessing/   # 문서 유형별 chunker, ChromaDB build
+│   │   └── rag/             # Retriever, chat graph
+│   └── main.py              # FastAPI app entrypoint
 ├── frontend/
-│   ├── components/
-│   ├── pages/
-│   ├── services/
-│   ├── state/
-│   └── views/
+│   ├── components/          # 공통 UI 컴포넌트
+│   ├── config/              # API mode/base URL 설정
+│   ├── domain/              # 화면 상수, 옵션 정의
+│   ├── pages/               # Streamlit page entry
+│   ├── services/            # API client, payload 변환, mock API
+│   ├── state/               # 자가진단 세션 상태
+│   ├── views/               # 자가진단/결과/챗봇 화면 구성
+│   └── streamlit_app.py     # Streamlit app entrypoint
 ├── docs/
 │   ├── reports/             # 최종 제출 산출물 4종
 │   └── assets/
