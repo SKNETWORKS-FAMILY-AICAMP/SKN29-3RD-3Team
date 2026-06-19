@@ -57,7 +57,7 @@
       <img src="./docs/assets/team/jun-eok.jpg" width="220" /><br/>
       <h3>준억</h3>
       <b>Backend</b><br/>
-      <sub>API 연동 · LangChain 파이프라인 연계</sub>
+      <sub>API 연동·LangChain 파이프라인 연계</sub>
     </td>
     <td align="center" width="25%">
       <img src="./docs/assets/team/dong-yoon.jpg" width="220" /><br/>
